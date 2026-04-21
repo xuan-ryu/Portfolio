@@ -15,7 +15,12 @@
       "WebFetch(domain:css-tricks.com)",
       "WebFetch(domain:bugzilla.mozilla.org)",
       "Bash(git --version)",
-      "Bash(gh --version)"
+      "Bash(gh --version)",
+      "Bash(git branch *)",
+      "Bash(git pull *)",
+      "Bash(git push *)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   }
 }
