@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="FrogHire.ai — UX Design case study by XUYUAN." />
+  <title>FrogHire.ai — XUYUAN</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="../css/global.css" />
+  <link rel="stylesheet" href="../css/page-project.css" />
+</head>
+<body>
+
+<nav class="content-nav" role="navigation" aria-label="Primary navigation">
+  <div class="content-nav-inner">
+    <a href="../index.html" class="nav-logo">XUYUAN</a>
+    <div class="nav-links">
+      <a href="./index.html">work</a>
+      <a href="../about/">about</a>
+      <a href="../contact/">contact</a>
+    </div>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+<div class="nav-drawer" aria-hidden="true">
+  <a href="./index.html">work</a>
+  <a href="../about/">about</a>
+  <a href="../contact/">contact</a>
+</div>
+
+<main>
+  <!-- Hero cover -->
+  <div class="proj-hero cover-froghire placeholder">
+    <span class="cover-label">FrogHire.ai — Cover</span>
+  </div>
+
+  <!-- Intro -->
+  <div class="container">
+    <div class="proj-intro" data-fade>
+      <p class="label proj-eyebrow">UX Design · Research · AI/ML</p>
+      <h1 class="proj-title">FrogHire.ai</h1>
+      <p class="proj-oneliner">Redesigning the AI-powered hiring experience for early-career talent — making algorithmic screening feel fair, transparent, and human.</p>
+    </div>
+
+    <!-- Meta -->
+    <div class="proj-meta" data-fade>
+      <div class="meta-cell">
+        <div class="meta-label">Role</div>
+        <div class="meta-value">UX Design Lead<br>User Research</div>
+      </div>
+      <div class="meta-cell">
+        <div class="meta-label">Duration</div>
+        <div class="meta-value">2023.09 – 2024.05<br>8 months</div>
+      </div>
+      <div class="meta-cell">
+        <div class="meta-label">Team</div>
+        <div class="meta-value">Solo (+ eng. collab.)</div>
+      </div>
+      <div class="meta-cell">
+        <div class="meta-label">Tools</div>
+        <div class="meta-value">
+          <span class="pill">Figma</span>
+          <span class="pill">Framer</span>
+          <span class="pill">Maze</span>
+          <span class="pill">Otter.ai</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="proj-layout">
+
+      <!-- Sidebar TOC -->
+      <aside class="proj-sidebar" aria-label="Section navigation">
+        <nav>
+          <a href="#overview">Overview</a>
+          <a href="#problem">Problem</a>
+          <a href="#process">Process</a>
+          <a href="#solution">Solution</a>
+          <a href="#outcome">Outcome</a>
+          <a href="#reflection">Reflection</a>
+        </nav>
+      </aside>
+
+      <!-- Main content -->
+      <div class="proj-content">
+
+        <section class="proj-section" id="overview">
+          <h2 class="proj-section-title">Overview</h2>
+          <p>FrogHire.ai uses machine learning to help companies identify strong candidates beyond traditional resumes. My work focused on redesigning the candidate-facing experience — specifically the screening and skills-assessment flow — making the AI evaluation process feel fair, transparent, and genuinely human.</p>
+          <p>The platform serves early-career candidates (0–3 years experience) who are most vulnerable to opaque algorithmic filtering. Getting this wrong means qualified people never get a fair chance.</p>
+          <div class="proj-img">
+            <span class="img-label">Overview — candidate flow diagram</span>
+          </div>
+        </section>
+
+        <section class="proj-section" id="problem">
+          <h2 class="proj-section-title">Problem</h2>
+          <p>Early-career candidates reported feeling alienated by black-box AI screening systems. The existing interface failed to communicate what the AI was evaluating, leaving users anxious and disempowered. Three core pain points emerged from initial discovery research:</p>
+          <ul>
+            <li><strong>Opacity:</strong> Candidates had no idea what skills or behaviors the AI was measuring during live assessments.</li>
+            <li><strong>Perceived unfairness:</strong> Without context, users assumed bias — especially candidates from non-traditional backgrounds.</li>
+            <li><strong>Lack of feedback:</strong> The old system provided zero signal after completion. Candidates felt like they shouted into a void.</li>
+          </ul>
+          <p>Internally, the platform also struggled with high candidate dropout rates (71%) during the screening phase — a direct business problem that aligned with the user experience problem.</p>
+        </section>
+
+        <section class="proj-section" id="process">
+          <h2 class="proj-section-title">Process</h2>
+
+          <h4>Research</h4>
+          <p>I conducted 12 semi-structured user interviews with recent graduates and early-career job seekers across different industries. Sessions were 45–60 minutes and covered past experiences with automated hiring tools, mental models of "fairness," and emotional responses to uncertainty.</p>
+          <p>Affinity mapping of interview transcripts surfaced three clusters: control, legibility, and closure. Candidates didn't just want a fair process — they wanted to understand it, feel capable within it, and receive acknowledgment afterward.</p>
+
+          <h4>Competitive Analysis</h4>
+          <p>I reviewed 8 competing hiring platforms (including HireVue, Pymetrics, and LinkedIn's Skills Assessments). Most fell into one of two failure modes: over-explaining upfront (front-loading anxiety) or explaining nothing at all. None provided contextual, in-the-moment guidance.</p>
+
+          <h4>Design Sprints</h4>
+          <p>Three 2-week design sprints, each ending with moderated usability testing. Sprint 1 focused on the onboarding and framing; Sprint 2 on the live assessment interface; Sprint 3 on the post-submission feedback layer.</p>
+          <div class="proj-img">
+            <span class="img-label">Sprint 2 — assessment interface wireframes</span>
+          </div>
+          <p>45 participants tested across the two major rounds of testing (Sprint 2 + 3). Testing was conducted via Maze for unmoderated click-through tests and Zoom for moderated sessions.</p>
+        </section>
+
+        <section class="proj-section" id="solution">
+          <h2 class="proj-section-title">Solution</h2>
+          <p>A redesigned onboarding and evaluation flow built around three principles: <strong>Explain before, encourage during, affirm after.</strong></p>
+
+          <h4>Transparent Framing</h4>
+          <p>Before the assessment begins, a plain-language brief explains exactly what FrogHire measures (problem-solving approach, communication clarity, adaptability) and — crucially — what it does not measure (accent, appearance, demographic signals). This reframes the experience from "test" to "conversation."</p>
+
+          <h4>Contextual Micro-guidance</h4>
+          <p>During live tasks, small contextual cues ("Take your time — there's no single correct answer") reduced anxiety without interrupting flow. These cues are triggered by hesitation patterns, not timers, so they feel responsive rather than patronizing.</p>
+
+          <h4>Strengths-based Feedback</h4>
+          <p>Instead of a binary pass/fail or an opaque score, candidates receive a "Strengths Summary" 24 hours after submission — three specific observations written in plain language. Even candidates who don't advance get meaningful signal about what they demonstrated well.</p>
+          <div class="proj-img">
+            <span class="img-label">Solution — Strengths Summary screen</span>
+          </div>
+        </section>
+
+        <section class="proj-section" id="outcome">
+          <h2 class="proj-section-title">Outcome</h2>
+          <div class="stat-grid">
+            <div class="stat-cell">
+              <div class="stat-number">68%</div>
+              <div class="stat-desc">Reduction in candidate dropout during screening</div>
+            </div>
+            <div class="stat-cell">
+              <div class="stat-number">61</div>
+              <div class="stat-desc">NPS score (up from 23 in baseline)</div>
+            </div>
+            <div class="stat-cell">
+              <div class="stat-number">89%</div>
+              <div class="stat-desc">of test users rated the process "fair"</div>
+            </div>
+          </div>
+          <p style="margin-top:24px;">The redesign shipped to a beta cohort of 1,200 candidates in Q1 2024. The dropout reduction translated to a meaningful increase in completed assessments for hiring partners — directly addressing the business case for the project.</p>
+        </section>
+
+        <section class="proj-section" id="reflection">
+          <h2 class="proj-section-title">Reflection</h2>
+          <p>The biggest design lesson: transparency isn't enough — <em>timing</em> matters. My first instinct was to front-load explanations during onboarding. Testing quickly revealed that candidates ignored them; anxiety was lowest when the same information appeared in context, precisely when it was relevant.</p>
+          <p>I also underestimated how much the feedback layer would matter. Candidates who received the Strengths Summary — even those who didn't advance — were significantly more likely to use FrogHire again. Closure is undervalued in hiring UX.</p>
+          <p>If I returned to this project, I'd invest more time in the employer-facing side: making it easier for hiring teams to understand and act on candidate strengths data, not just rank candidates.</p>
+        </section>
+
+        <!-- Nav: prev/next -->
+        <nav class="proj-nav" aria-label="Project navigation">
+          <div class="proj-nav-item">
+            <span class="proj-nav-label">← Previous</span>
+            <span class="proj-nav-title">Digital Socialism Domain</span>
+          </div>
+          <a href="roper-center.html" class="proj-nav-item next">
+            <span class="proj-nav-label">Next →</span>
+            <span class="proj-nav-title">Roper Center</span>
+          </a>
+        </nav>
+
+      </div><!-- /.proj-content -->
+    </div><!-- /.proj-layout -->
+  </div><!-- /.container -->
+</main>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-left">
+      <div class="footer-logo">XUYUAN</div>
+      <p class="footer-copy">© 2024 XUYUAN. All rights reserved.</p>
+    </div>
+    <nav class="footer-nav">
+      <a href="./index.html">work</a>
+      <a href="../about/">about</a>
+      <a href="../contact/">contact</a>
+    </nav>
+    <div class="footer-social">
+      <a href="https://www.linkedin.com/" rel="noopener" target="_blank">linkedin</a>
+      <a href="https://www.instagram.com/" rel="noopener" target="_blank">instagram</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../js/shared-nav.js"></script>
+</body>
+</html>

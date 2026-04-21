@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Minimalist Ink Koi Ecosystem</title>
+  <link href="https://fonts.googleapis.com/css2?family=Murecho:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=ZCOOL+XiaoWei&family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      height: 200vh;
+      background: #020305;
+      font-family: 'Murecho', 'Inter', system-ui, sans-serif;
+      overflow-x: hidden;
+    }
+
+    #koi-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      cursor: default;
+      z-index: 0;
+    }
+
+    #fishCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      filter: blur(3.2px) contrast(1.18) brightness(0.92);
+      opacity: 0;
+      will-change: opacity;
+    }
+
+    #padCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      pointer-events: none;
+      filter: blur(1px) contrast(1.12) brightness(0.96);
+      opacity: 0;                    /* 初始隐藏，由滚动驱动显现 */
+      will-change: opacity;
+    }
+
+    #top-tip {
+      position: absolute;
+      top: 30px;
+      width: 100%;
+      text-align: center;
+      color: rgba(255, 255, 255, 0.3);
+      font-size: 12px;
+      letter-spacing: 3px;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    #hero-ui {
+      position: absolute;
+      top: 8vh;
+      left: 5vw;
+      max-width: 680px;
+      pointer-events: none;
+      z-index: 30;
+      background: rgba(10, 14, 18, 0.42);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      padding: clamp(28px, 3.5vw, 44px);
+      border-radius: 14px;
+      box-shadow: 0 24px 56px rgba(0, 0, 0, 0.80);
+      opacity: 0;
+      transform: translate3d(0, 40px, 0);
+      will-change: transform, opacity;
+    }
+
+    #hero-eyebrow {
+      font-family: 'Cormorant Garamond', 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
+      font-style: italic;
+      font-size: clamp(13px, 1.1vw, 16px);
+      letter-spacing: 0.24em;
+      color: rgba(255, 255, 255, 0.45);
+      text-transform: uppercase;
+      margin: 0 0 20px 2px;
+      opacity: 0;
+    }
+
+    .main-title {
+      font-family: 'Cormorant Garamond', 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
+      font-size: clamp(54px, 6vw, 96px);
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      line-height: 1.0;
+      margin: 0;
+      text-shadow: none;
+    }
+    .main-title span {
+      display: block;
+      font-style: italic;
+      font-size: 0.60em;
+      margin-top: 6px;
+      letter-spacing: 0.10em;
+    }
+
+    #hero-divider {
+      width: 0;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.22);
+      margin: 28px 0;
+    }
+
+    #hero-meta {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      opacity: 0;
+      transform: translate3d(12px, 0, 0);
+    }
+
+    #hero-flow {
+      font-family: 'Cormorant Garamond', 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
+      font-size: clamp(17px, 1.6vw, 24px);
+      letter-spacing: 0.06em;
+      color: rgba(230, 230, 230, 0.88);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #hero-flow .arr {
+      color: rgba(255, 255, 255, 0.25);
+      font-style: italic;
+      font-size: 0.80em;
+    }
+
+    #hero-tag {
+      font-family: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
+      font-size: clamp(12px, 0.95vw, 15px);
+      font-weight: 300;
+      letter-spacing: 0.20em;
+      color: rgba(255, 255, 255, 0.32);
+      border-left: 1px solid rgba(255, 255, 255, 0.15);
+      padding-left: 20px;
+    }
+
+    #hero-attrs {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      margin-top: 22px;
+      padding-top: 22px;
+      border-top: 1px solid rgba(255, 255, 255, 0.10);
+      opacity: 0;
+      transform: translate3d(12px, 0, 0);
+    }
+    #hero-attrs span {
+      font-family: 'Murecho', sans-serif;
+      font-size: clamp(12px, 1.0vw, 14px);
+      letter-spacing: 0.03em;
+      color: rgba(255, 255, 255, 0.72);
+      line-height: 1.4;
+    }
+    .attr-sep {
+      color: rgba(255, 255, 255, 0.24);
+      margin: 0 6px;
+    }
+
+    #scroll-tip {
+      position: absolute;
+      bottom: 36px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    /* ── Feed UI (integrated into hero card) ── */
+    #feed-ui {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 28px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(255,255,255,0.12);
+      cursor: pointer;
+      user-select: none;
+      pointer-events: auto;
+    }
+    .feed-pellets {
+      position: relative;
+      width: 52px;
+      height: 34px;
+      flex-shrink: 0;
+      animation: pelletGlow 2.8s ease-in-out infinite;
+    }
+    .pellet {
+      position: absolute;
+      border-radius: 50em;
+      background: linear-gradient(135deg, #ffe07a 0%, #d38010 100%);
+    }
+    .pellet:nth-child(1) { width: 22px; height: 11px; top:  1px; left:  0;    transform: rotate(-20deg); }
+    .pellet:nth-child(2) { width: 15px; height:  8px; top:  4px; left: 28px;  transform: rotate( 18deg); }
+    .pellet:nth-child(3) { width: 12px; height:  7px; top: 20px; left:  9px;  transform: rotate( -6deg); }
+    .pellet:nth-child(4) { width:  9px; height:  6px; top: 22px; left: 34px;  transform: rotate( 26deg); }
+    @keyframes pelletGlow {
+      0%,100% { filter: drop-shadow(0 0 6px rgba(220,155,15,0.90)) drop-shadow(0 0 18px rgba(220,155,15,0.60)) drop-shadow(0 0 40px rgba(220,155,15,0.30)); }
+      50%      { filter: drop-shadow(0 0 10px rgba(255,190,30,1.00)) drop-shadow(0 0 32px rgba(220,155,15,0.90)) drop-shadow(0 0 72px rgba(220,155,15,0.50)); }
+    }
+    .feed-text {
+      font-family: 'Cormorant Garamond', 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
+      font-style: italic;
+      font-size: clamp(20px, 1.8vw, 26px);
+      letter-spacing: 0.06em;
+      color: rgba(255,255,255,0.70);
+      transition: color 0.2s;
+    }
+    #feed-ui:hover .feed-pellets { filter: drop-shadow(0 0 12px rgba(255,190,30,1.00)) drop-shadow(0 0 36px rgba(220,155,15,1.00)) drop-shadow(0 0 80px rgba(220,155,15,0.55)); animation: none; }
+    #feed-ui:hover .feed-text { color: #fff; }
+    /* Feed mode active state */
+    body.feed-mode #feed-ui .feed-pellets {
+      animation: none;
+      filter: drop-shadow(0 0 12px rgba(255,190,30,1.00)) drop-shadow(0 0 36px rgba(220,155,15,1.00)) drop-shadow(0 0 80px rgba(220,155,15,0.55));
+    }
+    body.feed-mode #feed-ui .feed-text {
+      color: #fff;
+    }
+    body.feed-mode #koi-container { cursor: none; }
+
+    /* ── Custom feed cursor ── */
+    #feed-cursor {
+      position: fixed;
+      pointer-events: none;
+      z-index: 1000;
+      width: 22px; height: 22px;
+      display: none;
+      transform: translate(-50%, -50%);
+    }
+    #feed-cursor::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,0.78);
+      box-shadow: 0 0 5px rgba(255,255,255,0.28);
+    }
+    #feed-cursor::after {
+      content: '';
+      position: absolute;
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.92);
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      box-shadow: 0 0 4px rgba(255,255,255,0.45);
+    }
+    body.feed-mode #feed-cursor { display: block; }
+  </style>
+</head>
+<body>
+
+  <div id="koi-container">
+    <canvas id="fishCanvas"></canvas>
+    <canvas id="padCanvas"></canvas>
+    <div id="feed-cursor"></div>
+
+    <div id="hero-ui">
+      <div id="hero-eyebrow">UX Designer &amp; Researcher</div>
+      <h2 id="main-title" class="main-title">
+        PM-minded
+        <span id="sub-title">Product Designer</span>
+      </h2>
+      <div id="hero-divider"></div>
+      <div id="hero-meta">
+        <div id="hero-flow">
+          <span>Research</span>
+          <span class="arr">→</span>
+          <span>Priorities</span>
+          <span class="arr">→</span>
+          <span>Design</span>
+        </div>
+        <div id="hero-tag">先聽後行 · 以終為始</div>
+      </div>
+      <div id="hero-attrs">
+        <span><svg width="15" height="11" viewBox="0 0 15 11" fill="none" style="vertical-align:middle;margin-right:7px;opacity:0.45"><rect x="0" y="1" width="5" height="9" rx="1" fill="currentColor"/><rect x="10" y="0" width="5" height="7" rx="1" fill="currentColor"/><path d="M5 5.5 Q7.5 4 10 3.5" stroke="currentColor" stroke-width="1" opacity="0.6"/></svg>B2B <span class="attr-sep">·</span> B2C <span class="attr-sep">·</span> SaaS</span>
+        <span>Startup <span class="attr-sep">+</span> Enterprise</span>
+        <span>Code-literate <span class="attr-sep">+</span> AI workflows</span>
+        <span>Bridges product <span class="attr-sep">·</span> design <span class="attr-sep">·</span> engineering</span>
+      </div>
+      <div id="feed-ui">
+        <div class="feed-pellets">
+          <span class="pellet"></span>
+          <span class="pellet"></span>
+          <span class="pellet"></span>
+          <span class="pellet"></span>
+        </div>
+        <div class="feed-text">Why not feed the fish?</div>
+      </div>
+    </div>
+
+    <div id="scroll-tip">
+      <div style="font-family: 'Cormorant Garamond', 'ZCOOL XiaoWei', 'Noto Serif SC', serif; font-style: italic; font-size: 11px; letter-spacing: 0.15em; color: rgba(255, 255, 255, 0.4); text-transform: uppercase;">
+        Scroll to reveal
+      </div>
+      <div style="width: 24px; height: 1px; background: rgba(255, 255, 255, 0.3);"></div>
+    </div>
+
+  </div>
+
+  <script>
+    // =========================
+    // Utils
+    // =========================
+    const TWO_PI = Math.PI * 2;
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+    const rand  = (a, b) => a + Math.random() * (b - a);
+    const dist  = (ax, ay, bx, by) => Math.hypot(ax - bx, ay - by);
+
+    // Pre-allocated body path buffers — avoids per-frame array allocations in drawSmoothBodyPath
+    // Max 24 segments × 2 sides = 48 points
+    const _bodyPtsX = new Float32Array(48);
+    const _bodyPtsY = new Float32Array(48);
+
+    function angleDelta(a, b) {
+      let d = b - a;
+      if (d > Math.PI) d -= TWO_PI;
+      if (d < -Math.PI) d += TWO_PI;
+      return d;
+    }
+    function lerpAngle(a, b, t) {
+      return a + angleDelta(a, b) * t;
+    }
+
+    // =========================
+    // UI Scroll (rAF throttle)
+    // =========================
+    const uiBox       = document.getElementById('hero-ui');
+    const heroEyebrow = document.getElementById('hero-eyebrow');
+    const mainTitle   = document.getElementById('main-title');
+    const subTitle    = document.getElementById('sub-title');
+    const heroDivider = document.getElementById('hero-divider');
+    const heroMeta    = document.getElementById('hero-meta');
+    const heroAttrs   = document.getElementById('hero-attrs');
+    const scrollTip   = document.getElementById('scroll-tip');
+    const canvas      = document.getElementById('fishCanvas');
+    const padCanvas   = document.getElementById('padCanvas');
+
+    function updateScrollEffects(scrollY) {
+      // 鱼：最先出现（0→100px），二次缓出
+      const fishProgress = clamp(scrollY / 100, 0, 1);
+      canvas.style.opacity = 1 - Math.pow(1 - fishProgress, 2);
+
+      // 荷叶：紧随其后（0→160px），二次缓出
+      const padProgress = clamp(scrollY / 160, 0, 1);
+      padCanvas.style.opacity = 1 - Math.pow(1 - padProgress, 2);
+
+      const introStart = 60;
+      const introFull = 280;
+
+      const introProgress = clamp((scrollY - introStart) / (introFull - introStart), 0, 1);
+      const eased = 1 - Math.pow(1 - introProgress, 3);
+
+      uiBox.style.opacity = eased;
+      uiBox.style.transform = `translate3d(0, ${(1 - eased) * 40}px, 0)`;
+
+      heroEyebrow.style.opacity = eased;
+      mainTitle.style.color = `rgba(250,250,250,${0.92 * eased})`;
+      subTitle.style.color  = `rgba(255,255,255,${0.55 * eased})`;
+
+      const divEase = clamp((eased - 0.30) / 0.40, 0, 1);
+      heroDivider.style.width = `${divEase * 200}px`;
+
+      const metaEase = clamp((eased - 0.55) / 0.35, 0, 1);
+      heroMeta.style.opacity = metaEase;
+      heroMeta.style.transform = `translate3d(${(1 - metaEase) * 12}px, 0, 0)`;
+
+      const attrsEase = clamp((eased - 0.72) / 0.28, 0, 1);
+      heroAttrs.style.opacity = attrsEase;
+      heroAttrs.style.transform = `translate3d(${(1 - attrsEase) * 12}px, 0, 0)`;
+
+      scrollTip.style.opacity = Math.max(0, 1 - scrollY / 120);
+    }
+
+    let pendingScroll = false;
+    let latestScrollY = window.scrollY || document.documentElement.scrollTop;
+    window.addEventListener('scroll', () => {
+      latestScrollY = window.scrollY || document.documentElement.scrollTop;
+      if (pendingScroll) return;
+      pendingScroll = true;
+      requestAnimationFrame(() => {
+        pendingScroll = false;
+        updateScrollEffects(latestScrollY);
+      });
+    }, { passive: true });
+    updateScrollEffects(latestScrollY);
+
+    // =========================
+    // Feed mode
+    // =========================
+    let feedMode = false;
+    const feedCursor = document.getElementById('feed-cursor');
+    const feedBtn    = document.getElementById('feed-ui');
+    feedBtn.addEventListener('click', () => {
+      feedMode = !feedMode;
+      document.body.classList.toggle('feed-mode', feedMode);
+    });
+
+    // =========================
+    // Canvas setup + quality
+    // =========================
+    const container = document.getElementById('koi-container');
+    const ctx = canvas.getContext("2d", { alpha: false });
+
+    const padCtx = padCanvas.getContext("2d", { alpha: true });
+
+    const hwCores = navigator.hardwareConcurrency || 4;
+    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+    const prefersReduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // 简单档位：低端/移动/减少动画 -> low
+    let quality = (isMobile || hwCores <= 4 || prefersReduce) ? 0 : 1;
+
+    let width = 0, height = 0, centerX = 0, centerY = 0, DPR = 1;
+
+    function applyCanvasFilter() {
+      canvas.style.filter = quality
+        ? "blur(3.2px) contrast(1.18) brightness(0.92)"
+        : "blur(1px) contrast(1.12) brightness(0.94)";
+    }
+
+    // 缓存 canvas rect，避免每次 move 都 getBoundingClientRect（很贵）
+    let canvasRect = null;
+    function updateCanvasRect() { canvasRect = canvas.getBoundingClientRect(); }
+
+    // =========================
+    // Lily pads: fixed 8 in bottom-right quadrant
+    // =========================
+    let lilyPads = [];
+    const lilyConfig = [
+      // 主丛（右上角，右边缘可裁剪，顶部留安全距离）
+      { x: 0.93, y: 0.22, r: 0.105, alpha: 0.26, rot: -0.30, seed: 52.1 },
+      { x: 0.88, y: 0.15, r: 0.092, alpha: 0.24, rot:  0.12, seed: 11.2 },
+      { x: 0.82, y: 0.10, r: 0.078, alpha: 0.22, rot: -0.22, seed: 27.7 },
+      { x: 0.96, y: 0.10, r: 0.070, alpha: 0.20, rot:  0.35, seed: 63.4 },
+      { x: 0.86, y: 0.08, r: 0.060, alpha: 0.18, rot:  0.58, seed: 19.1 },
+
+      // 副丛（中偏右上）
+      { x: 0.68, y: 0.12, r: 0.078, alpha: 0.18, rot:  0.30, seed: 37.5 },
+      { x: 0.74, y: 0.19, r: 0.065, alpha: 0.17, rot: -0.05, seed: 44.8 },
+      { x: 0.80, y: 0.26, r: 0.055, alpha: 0.15, rot:  0.55, seed: 88.6 },
+
+      // 散叶（右侧偏上，最左不超过 60%）
+      { x: 0.58, y: 0.20, r: 0.082, alpha: 0.16, rot: -0.20, seed: 15.6 },
+      { x: 0.74, y: 0.32, r: 0.058, alpha: 0.14, rot:  0.42, seed: 77.3 },
+      { x: 0.97, y: 0.28, r: 0.050, alpha: 0.13, rot: -0.38, seed: 71.9 },
+      { x: 0.65, y: 0.10, r: 0.045, alpha: 0.12, rot: -0.15, seed: 33.3 },
+    ];
+
+    function rebuildLilyPads() {
+      lilyPads = [];
+      const base = Math.min(width, height);
+      for (const c of lilyConfig) {
+        lilyPads.push({
+          x: width * c.x,
+          y: height * c.y,
+          r: base * c.r,
+          alpha: c.alpha,
+          phase: rand(0, TWO_PI),
+          speed: rand(0.0012, 0.0022),
+          seed: c.seed,
+          rotation: c.rot,
+        });
+      }
+    }
+
+    function resize() {
+      DPR = quality ? Math.min(2, window.devicePixelRatio || 1) : 1;
+
+      width = container.clientWidth;
+      height = container.clientHeight;
+
+      canvas.width = Math.floor(width * DPR);
+      canvas.height = Math.floor(height * DPR);
+      canvas.style.width = width + "px";
+      canvas.style.height = height + "px";
+
+      padCanvas.width = Math.floor(width * DPR);
+      padCanvas.height = Math.floor(height * DPR);
+      padCanvas.style.width = width + "px";
+      padCanvas.style.height = height + "px";
+
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      padCtx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+      centerX = width / 2;
+      centerY = height / 2;
+
+      applyCanvasFilter();
+      rebuildLilyPads();
+      updateCanvasRect();
+    }
+
+    let _resizeTimer = 0;
+    window.addEventListener("resize", () => {
+      clearTimeout(_resizeTimer);
+      _resizeTimer = setTimeout(resize, 200);
+    }, { passive: true });
+    // #fishCanvas is position:fixed — getBoundingClientRect() is unaffected by scroll,
+    // so the scroll→updateCanvasRect listener is unnecessary.
+    resize();
+
+    // =========================
+    // Pointer target
+    // =========================
+    let target = { x: centerX, y: centerY, hasMoved: false };
+
+    const getMousePos = (clientX, clientY) => {
+      const rect = canvasRect || canvas.getBoundingClientRect();
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    };
+
+    window.addEventListener("mousemove", (e) => {
+      const pos = getMousePos(e.clientX, e.clientY);
+      target.x = pos.x; target.y = pos.y; target.hasMoved = true;
+      if (feedMode) {
+        feedCursor.style.left = e.clientX + 'px';
+        feedCursor.style.top  = e.clientY + 'px';
+      }
+    }, { passive: true });
+
+    window.addEventListener("touchmove", (e) => {
+      const t = e.touches && e.touches[0];
+      if (!t) return;
+      const pos = getMousePos(t.clientX, t.clientY);
+      target.x = pos.x; target.y = pos.y; target.hasMoved = true;
+    }, { passive: true });
+
+    // =========================
+    // Entities
+    // =========================
+    class FoodParticle {
+      constructor(x, y) {
+        this.x = x; this.y = y;
+        this.vx = rand(-0.6, 0.6); this.vy = rand(0.5, 1.5);
+        this.r = rand(2.8, 4.2); this.wob = rand(0, TWO_PI);
+        this.alive = true; this.dropScale = 2.5;
+      }
+      update() {
+        this.wob += 0.05;
+        this.vx += Math.sin(this.wob) * 0.01;
+        this.vx *= 0.95; this.vy *= 0.95;
+        this.x += this.vx;
+        this.y += this.vy + Math.sin(this.wob) * 0.06;
+
+        if (this.dropScale > 1.0) this.dropScale -= 0.1;
+
+        if (this.y > height - 20) { this.y = height - 20; this.vy = 0; }
+        if (this.x < 20) { this.x = 20; this.vx = 0; }
+        if (this.x > width - 20) { this.x = width - 20; this.vx = 0; }
+      }
+      draw() {
+        const currentR = this.r * Math.max(1, this.dropScale);
+        ctx.save();
+        ctx.globalCompositeOperation = "source-over";
+        ctx.fillStyle = "#d0d0d0";
+        ctx.beginPath(); ctx.arc(this.x, this.y, currentR, 0, TWO_PI); ctx.fill();
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath(); ctx.arc(this.x - currentR * 0.25, this.y - currentR * 0.3, currentR * 0.4, 0, TWO_PI); ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    class Egg {
+      constructor(x, y, typeHint = "yamabuki") {
+        this.x = x; this.y = y; this.r = rand(10, 14);
+        this.vx = rand(-0.08, 0.08); this.vy = rand(-0.1, 0.12);
+        this.wob = rand(0, TWO_PI); this.typeHint = typeHint;
+        this.pulse = rand(0, TWO_PI);
+        this.birthTime = performance.now(); // ✅ 用 rAF 时间轴
+      }
+      hitTest(px, py) { return dist(this.x, this.y, px, py) <= this.r * 2.0; }
+      update() {
+        this.wob += 0.02; this.pulse += 0.045;
+        this.x += this.vx + Math.sin(this.wob) * 0.08;
+        this.y += this.vy + Math.cos(this.wob) * 0.06;
+        const m = 50;
+        this.x = clamp(this.x, m, width - m);
+        this.y = clamp(this.y, m, height - m);
+      }
+      draw() {
+        const glow = 0.35 + 0.2 * Math.sin(this.pulse);
+        ctx.save();
+        ctx.globalCompositeOperation = "screen";
+        ctx.fillStyle = `rgba(240, 235, 225, ${0.1 + glow * 0.1})`;
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.r * 2.1, 0, TWO_PI); ctx.fill();
+
+        ctx.globalCompositeOperation = "source-over";
+        ctx.fillStyle = `rgba(235, 232, 225, 0.55)`;
+        ctx.strokeStyle = `rgba(255,255,255, ${0.18 + glow * 0.08})`;
+        ctx.lineWidth = 1.1;
+        ctx.beginPath(); ctx.ellipse(this.x, this.y, this.r * 1.05, this.r * 0.85, 0.2, 0, TWO_PI); ctx.fill(); ctx.stroke();
+
+        ctx.globalCompositeOperation = "screen";
+        ctx.fillStyle = `rgba(220, 220, 220, ${0.1 + glow * 0.1})`;
+        ctx.beginPath(); ctx.ellipse(this.x + this.r * 0.15, this.y + this.r * 0.1, this.r * 0.52, this.r * 0.4, -0.15, 0, TWO_PI); ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    class Koi {
+      constructor(x, y, type, scale = 1) {
+        this.x = x; this.y = y; this.angle = Math.random() * TWO_PI;
+        this.numSegments = 24;
+        this.segments = Array.from({ length: this.numSegments }, () => ({ x, y, angle: 0 }));
+
+        this.baseScale = scale * 0.7;
+        this.fat = 1.0;
+        this.fatTarget = 1.0;
+        // 大鱼微微更修长（幅度小，不破坏长宽比）
+        const elongation = 1 + Math.max(0, this.baseScale - 0.7) * 0.08;
+        this.segLength = 6.2 * this.baseScale * elongation;
+
+        // 鼻端钝圆（7.5，31% of max），头肩区渐展，峰值 i≈8，锦鲤轮廓而非海豚嘴
+        this.baseProfile = [7.5, 11.0, 15.0, 19.0, 21.5, 23.0, 23.8, 24.2, 24.4, 24.2, 23.5, 22.2, 20.5, 18.5, 16.5, 14.4, 12.5, 10.8, 9.3, 8.1, 7.2, 6.6, 6.1, 5.8];
+        // 小鱼略瘦但幅度小；关键是成长时 baseRadii 也要同步更新
+        const slimMult = Math.min(1.0, 0.85 + this.baseScale * 0.20);
+        this.baseRadii = this.baseProfile.map(r => r * this.baseScale * slimMult);
+
+        this.baseSpeed  = Math.max(0.18, 0.54 - this.baseScale * 0.18); // 小鱼巡游快，大鱼不至于停住
+        this.chaseSpeed = Math.max(0.65, 0.65 + this.baseScale * 0.46); // 大鱼追食快
+        this.currentSpeed = this.baseSpeed;
+
+        this.turnLerp = 0.06;
+        this.maxTurnPerFrame = 0.04;
+
+        this.swimCycle = Math.random() * 100;
+        this.wanderPhase = Math.random() * 100;
+
+        this.targetFood = null;
+        this.eatRadius = Math.max(12, 32 - this.baseScale * 14); // 小鱼吃食精准（半径大），大鱼难吃到（半径小）
+        this.finPhase = rand(0, TWO_PI);
+
+        // ✅ 动态改追最近食物（每3帧评估一次）
+        this.retargetTick = Math.floor(rand(0, 3));
+
+        if (type === "kohaku") {
+          this.type = "kohaku";
+          this.colors = { base: "rgba(235, 234, 228, 0.95)", pattern: "rgba(195, 42, 42, 0.9)", fin: "rgba(252, 252, 250, 0.58)", finEdge: "rgba(255,255,255,0.25)", inkEdge: "rgba(10, 14, 18, 0.20)" };
+        } else if (type === "sanke") {
+          this.type = "sanke";
+          this.colors = { base: "rgba(240, 238, 234, 0.95)", pattern: "rgba(190, 42, 42, 0.9)", fin: "rgba(252, 252, 250, 0.50)", finEdge: "rgba(255,255,255,0.25)", inkEdge: "rgba(8, 10, 14, 0.26)" };
+        } else if (type === "showa") {
+          this.type = "showa";
+          this.colors = { base: "rgba(22, 18, 24, 0.96)", pattern: "rgba(185, 38, 38, 0.92)", fin: "rgba(88, 78, 108, 0.65)", finEdge: "rgba(210, 220, 240, 0.30)", inkEdge: "rgba(255,255,255,0.06)", rimLight: "rgba(180, 210, 255, 0.90)" };
+        } else {
+          this.type = "yamabuki";
+          this.colors = { base: "rgba(244, 240, 232, 0.95)", pattern: "rgba(215, 150, 45, 0.9)", fin: "rgba(252, 252, 248, 0.58)", finEdge: "rgba(255,255,255,0.25)", inkEdge: "rgba(10, 14, 18, 0.18)" };
+        }
+
+        this.patterns = this._genPatterns(this.type);
+      }
+
+      _genPatterns(type) {
+        const spots = [];
+        const n = Math.floor(rand(2, 5));
+        for (let i = 0; i < n; i++) {
+          const zStart = 3 + i * (16 / n);
+          const segIdx = clamp(Math.floor(rand(zStart, zStart + 16 / n)), 3, 19);
+          const col = type === "yamabuki" ? "rgba(215, 150, 45, 0.9)" : "rgba(195, 42, 42, 0.9)";
+          spots.push({ seg: segIdx, size: rand(1.0, 1.6), seed: rand(0, 100), color: col });
+        }
+        if (type === "sanke") {
+          const m = Math.floor(rand(1, 3));
+          for (let i = 0; i < m; i++) {
+            spots.push({ seg: Math.floor(rand(4, 18)), size: rand(0.5, 0.85), seed: rand(0, 100), color: "rgba(16, 16, 22, 0.82)" });
+          }
+        }
+        if (type === "showa") {
+          const rn = Math.floor(rand(2, 4));
+          for (let i = 0; i < rn; i++) {
+            spots.push({ seg: clamp(Math.floor(rand(3 + i * (14 / rn), 3 + i * (14 / rn) + 14 / rn)), 3, 18), size: rand(0.9, 1.6), seed: rand(0, 100), color: "rgba(185, 38, 38, 0.92)" });
+          }
+          const yn = Math.floor(rand(1, 3));
+          for (let i = 0; i < yn; i++) {
+            spots.push({ seg: Math.floor(rand(4, 17)), size: rand(0.7, 1.2), seed: rand(0, 100), color: "rgba(215, 165, 30, 0.88)" });
+          }
+        }
+        return spots;
+      }
+
+      get scale() { return this.baseScale; }
+
+      get radii() {
+        const f = this.fat;
+        const n = this.numSegments - 1;
+        return this.baseRadii.map((r, i) => {
+          const t = i / n;
+          // 肚腩峰值在 t≈0.58（偏后），头尾胀幅一致
+          const bellyT = clamp((t - 0.16) / 0.84, 0, 1);
+          const belly = Math.sin(Math.PI * bellyT);
+          const tailT = clamp((t - 0.72) / 0.26, 0, 1);
+          const tailBase = Math.sin(Math.PI * tailT);
+          return r * (1 + (f - 1) * (0.62 + 0.52 * belly + 0.12 * tailBase));
+        });
+      }
+
+      chooseFood(foodParticles) {
+        let best = null, bestD = Infinity;
+        const detectRange = 1200 * this.scale;
+        for (const p of foodParticles) {
+          if (!p.alive) continue;
+          const d = dist(this.x, this.y, p.x, p.y);
+          if (d < bestD && d < detectRange) { bestD = d; best = p; }
+        }
+        return best;
+      }
+
+      update(fishes, foodParticles, eggs) {
+        this.fat += (this.fatTarget - this.fat) * 0.04;
+
+        // 转向灵活度：小鱼敏捷，大鱼迟钝
+        const tr = Math.max(0.028, 0.086 - this.baseScale * 0.042);
+
+        let desiredAngle = this.angle;
+        let desiredSpeed = this.baseSpeed;
+        let isHunting = false;
+
+        // 边缘保护
+        let edgeTurn = false;
+        const safeMargin = Math.max(90, 120 * this.scale);
+
+        if (this.x < safeMargin) edgeTurn = true;
+        else if (this.x > width - safeMargin) edgeTurn = true;
+        if (this.y < safeMargin) edgeTurn = true;
+        else if (this.y > height - safeMargin) edgeTurn = true;
+
+        // 食物锁定：边缘区域也运行，这样靠边的鱼饵也能被发现
+        this.retargetTick = (this.retargetTick + 1) % 3;
+        if (!this.targetFood || !this.targetFood.alive || this.retargetTick === 0) {
+          const cand = this.chooseFood(foodParticles);
+          if (!this.targetFood || !this.targetFood.alive) {
+            this.targetFood = cand;
+          } else if (cand && cand.alive) {
+            const curD = dist(this.x, this.y, this.targetFood.x, this.targetFood.y);
+            const newD = dist(this.x, this.y, cand.x, cand.y);
+            if (newD < curD * 0.85) this.targetFood = cand;
+          }
+        }
+
+        if (edgeTurn) {
+          const centerAngle = Math.atan2(centerY - this.y, centerX - this.x);
+          this.maxTurnPerFrame = tr * 1.9; this.turnLerp = tr * 1.6;
+          if (this.targetFood && this.targetFood.alive) {
+            // 有食物时：混合食物方向和回中方向，不放弃追食
+            isHunting = true;
+            const foodAngle = Math.atan2(this.targetFood.y - this.y, this.targetFood.x - this.x);
+            desiredAngle = lerpAngle(foodAngle, centerAngle, 0.35);
+            desiredSpeed = this.chaseSpeed * 0.85;
+          } else {
+            desiredAngle = lerpAngle(this.angle, centerAngle, 0.15);
+            desiredSpeed = this.baseSpeed * 0.8;
+          }
+        } else if (this.targetFood) {
+          isHunting = true;
+          const dx = this.targetFood.x - this.x;
+          const dy = this.targetFood.y - this.y;
+          const d = Math.hypot(dx, dy);
+
+          const targetAngle = Math.atan2(dy, dx);
+          const angleDiff = angleDelta(this.angle, targetAngle);
+
+          if (d < 100 * this.scale && Math.abs(angleDiff) > Math.PI / 3) {
+            // 近距离但方向偏——慢速绕弧，对准食物而非原来的 sign*0.1
+            desiredAngle = targetAngle;
+            this.maxTurnPerFrame = tr * 0.45; this.turnLerp = tr * 0.40;
+            desiredSpeed = this.chaseSpeed * 0.75;
+          } else {
+            desiredAngle = targetAngle;
+            this.maxTurnPerFrame = tr * 1.3; this.turnLerp = tr * 1.0;
+            // 远距离全速冲刺（炮弹感）
+            desiredSpeed = d > 240 * this.scale ? this.chaseSpeed * 2.4 : this.chaseSpeed;
+          }
+        } else {
+          this.maxTurnPerFrame = tr * 0.85; this.turnLerp = tr * 0.70;
+
+          const dx = target.x - this.x, dy = target.y - this.y;
+          const d = Math.hypot(dx, dy);
+
+          if (feedMode && target.hasMoved && d < 380) {
+            desiredAngle = Math.atan2(dy, dx);
+            // 靠近时减速，防止超调后甩出跟随范围
+            desiredSpeed = d < 90 ? this.baseSpeed * 0.4 : this.baseSpeed + 0.05;
+          } else {
+            this.wanderPhase += 0.005;
+            const w = Math.sin(this.wanderPhase) * 0.18 + Math.sin(this.wanderPhase * 0.47) * 0.1;
+            desiredAngle = this.angle + w * 0.06;
+            desiredSpeed = this.baseSpeed;
+          }
+        }
+
+        // 进食检测：移至运动逻辑外，边缘时也能触发
+        if (this.targetFood && this.targetFood.alive) {
+          const _fd = dist(this.x, this.y, this.targetFood.x, this.targetFood.y);
+          if (_fd < this.eatRadius) {
+            this.targetFood.alive = false;
+            this.targetFood = null;
+
+            // 成熟度 0→1：scale < 1.4 纯长身体，scale > 2.4 才完全进入囤脂球态
+            const maturity = clamp((this.baseScale - 1.4) / 1.0, 0, 1);
+            // 幼鱼少囤脂（保持均匀身形），成熟后大量囤脂（可变球）
+            const fatGain = rand(0.003, 0.010) + maturity * rand(0.018, 0.032);
+            const fatMax  = 1.25 + maturity * 0.95; // 幼1.25 → 成熟2.20（球态）
+            this.fatTarget = clamp(this.fatTarget + fatGain, 1.0, fatMax);
+
+            // 体型无上限，越大长越慢，稍微快一点
+            this.baseScale += 0.018 / Math.max(0.8, this.baseScale);
+            const _elong = 1 + Math.max(0, this.baseScale - 0.7) * 0.08;
+            this.segLength  = 6.2 * this.baseScale * _elong;
+            this.baseSpeed  = Math.max(0.10, 0.54 - this.baseScale * 0.15);
+            this.chaseSpeed = Math.max(0.65, 0.65 + this.baseScale * 0.46);
+            this.eatRadius  = Math.max(10, 36 - this.baseScale * 12);
+            const _slim = Math.min(1.0, 0.85 + this.baseScale * 0.20);
+            this.baseRadii  = this.baseProfile.map(r => r * this.baseScale * _slim);
+
+            // 足够肥且体型达标才产卵
+            if (this.fatTarget >= 1.56 && this.baseScale >= 0.90) {
+              if (fishes.length < 32) eggs.push(new Egg(this.x, this.y, this.type));
+              this.fatTarget -= 0.30;
+            }
+          }
+        }
+
+        // 分离：两鱼体积之和决定排斥半径，模拟同一水面深度不重叠
+        let sepX = 0, sepY = 0, sepStr = 0;
+        for (const other of fishes) {
+          if (other === this) continue;
+          const d = dist(this.x, this.y, other.x, other.y);
+          const minD = (this.scale + other.scale) * 55;
+          if (d > 0 && d < minD) {
+            const s = Math.pow((minD - d) / minD, 1.5); // 非线性：越近排斥越强
+            sepX += (this.x - other.x) / d * s;
+            sepY += (this.y - other.y) / d * s;
+            sepStr = Math.max(sepStr, s);
+          }
+        }
+        if (sepStr > 0) {
+          const mix = (isHunting ? 0.22 : 0.12) * (0.4 + sepStr);
+          desiredAngle = lerpAngle(desiredAngle, Math.atan2(sepY, sepX), clamp(mix, 0, 0.26));
+          desiredSpeed *= (1 + sepStr * 0.03);
+        }
+
+        const dA = angleDelta(this.angle, desiredAngle);
+        const step = clamp(dA * this.turnLerp, -this.maxTurnPerFrame, this.maxTurnPerFrame);
+        this.angle += step;
+
+        // 不对称 lerp：加速快（炮弹冲出），减速慢（滑行感）
+        const sDiff = desiredSpeed - this.currentSpeed;
+        this.currentSpeed += sDiff * (sDiff > 0 ? 0.20 : 0.05);
+
+        this.x += Math.cos(this.angle) * this.currentSpeed;
+        this.y += Math.sin(this.angle) * this.currentSpeed;
+
+        this.x = clamp(this.x, -50, width + 50);
+        this.y = clamp(this.y, -50, height + 50);
+
+        const speedRatio = clamp(this.currentSpeed / this.baseSpeed, 0.5, 4.0);
+        // 胖鱼要更努力地摆动才能游动，fat 越高晃动越快
+        const fatWiggle = 1 + Math.max(0, this.fat - 1.0) * 0.55;
+        this.swimCycle += (isHunting ? 0.04 : 0.025) * speedRatio * fatWiggle;
+
+        this.segments[0].x = this.x;
+        this.segments[0].y = this.y;
+        this.segments[0].angle = this.angle;
+
+        for (let i = 1; i < this.numSegments; i++) {
+          const prev = this.segments[i - 1];
+          const curr = this.segments[i];
+          const t = i / (this.numSegments - 1);
+
+          let a = Math.atan2(prev.y - curr.y, prev.x - curr.x);
+
+          // 脊椎刚性限制：大鱼脊椎更硬，转弯弧度更大
+          let bend = angleDelta(prev.angle, a);
+          const MAX_BEND = Math.max(0.14, 0.30 - this.baseScale * 0.10);
+          if (Math.abs(bend) > MAX_BEND) a = prev.angle + Math.sign(bend) * MAX_BEND;
+
+          const wave = Math.sin(this.swimCycle - t * 3.5) * (t * 0.035);
+          a += wave;
+
+          curr.x = prev.x - Math.cos(a) * this.segLength;
+          curr.y = prev.y - Math.sin(a) * this.segLength;
+          curr.angle = a;
+        }
+      }
+
+      draw() {
+        this.drawFins();
+        this.drawBody();
+        this.drawDorsalFin();
+        this.drawCaudalFin();
+        this.drawEye();
+      }
+
+      drawSmoothBodyPath(context, radii) {
+        const n = this.numSegments;
+        for (let i = 0; i < n; i++) {
+          const s = this.segments[i], r = radii[i];
+          // right side: head→tail in slots 0..n-1
+          _bodyPtsX[i]           = s.x + Math.cos(s.angle + Math.PI / 2) * r;
+          _bodyPtsY[i]           = s.y + Math.sin(s.angle + Math.PI / 2) * r;
+          // left side: tail→head in slots n..2n-1 (mirrors unshift order)
+          _bodyPtsX[2 * n - 1 - i] = s.x + Math.cos(s.angle - Math.PI / 2) * r;
+          _bodyPtsY[2 * n - 1 - i] = s.y + Math.sin(s.angle - Math.PI / 2) * r;
+        }
+        const total = 2 * n;
+        context.moveTo(_bodyPtsX[0], _bodyPtsY[0]);
+        for (let i = 1; i < total - 1; i++) {
+          const xc = (_bodyPtsX[i] + _bodyPtsX[i + 1]) / 2;
+          const yc = (_bodyPtsY[i] + _bodyPtsY[i + 1]) / 2;
+          context.quadraticCurveTo(_bodyPtsX[i], _bodyPtsY[i], xc, yc);
+        }
+        context.quadraticCurveTo(_bodyPtsX[total - 1], _bodyPtsY[total - 1], _bodyPtsX[0], _bodyPtsY[0]);
+      }
+
+      drawBody() {
+        // Build path once — reuse for rim stroke, ink stroke, fill, and clip
+        const radii = this.radii;
+        const bodyPath = new Path2D();
+        this.drawSmoothBodyPath(bodyPath, radii);
+
+        ctx.save();
+        ctx.globalCompositeOperation = "source-over";
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+
+        if (this.colors.rimLight) {
+          ctx.save();
+          ctx.strokeStyle = this.colors.rimLight;
+          ctx.lineWidth = 4 * this.scale;
+          ctx.shadowColor = this.colors.rimLight;
+          ctx.shadowBlur = 10 * this.scale;
+          ctx.globalAlpha = 0.4;
+          ctx.stroke(bodyPath);
+
+          ctx.lineWidth = 1.5 * this.scale;
+          ctx.shadowBlur = 4 * this.scale;
+          ctx.globalAlpha = 0.8;
+          ctx.stroke(bodyPath);
+          ctx.restore();
+        }
+
+        ctx.strokeStyle = this.colors.inkEdge;
+        ctx.lineWidth = 1.0 * this.scale;
+        ctx.stroke(bodyPath);
+
+        ctx.fillStyle = this.colors.base;
+        ctx.fill(bodyPath);
+
+        ctx.clip(bodyPath);
+        for (const p of this.patterns) {
+          ctx.fillStyle = p.color;
+          this.drawOrganicSpot(this.segments[p.seg], p.size, p.seed);
+        }
+        ctx.restore();
+      }
+
+      drawOrganicSpot(seg, sizeMult, seed) {
+        const baseSize = 13 * this.scale * sizeMult;
+        const rr = (o) => Math.sin(seed + o) * baseSize * 0.36;
+
+        ctx.beginPath();
+        ctx.ellipse(seg.x, seg.y, baseSize, baseSize * 0.72, seg.angle, 0, TWO_PI);
+        ctx.ellipse(seg.x + rr(1), seg.y + rr(2), baseSize * 0.85, baseSize * 1.1, seg.angle + 0.35, 0, TWO_PI);
+        ctx.ellipse(seg.x + rr(3), seg.y + rr(4), baseSize * 1.05, baseSize * 0.62, seg.angle - 0.55, 0, TWO_PI);
+        ctx.fill();
+      }
+
+      finSwayAmp() {
+        const sp = clamp((this.currentSpeed - this.baseSpeed) / (this.chaseSpeed - this.baseSpeed + 1e-6), 0, 1);
+        return 0.15 + sp * 0.20;
+      }
+
+      drawFins() {
+        ctx.save();
+        ctx.globalCompositeOperation = "source-over";
+        ctx.fillStyle = this.colors.fin;
+        ctx.strokeStyle = this.colors.finEdge;
+        ctx.lineWidth = 1.15 * this.scale;
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+
+        const amp = this.finSwayAmp();
+        const t = this.swimCycle;
+        const ph = this.finPhase;
+
+        this.drawPectoralFin(this.segments[6], true, amp, ph, t);
+        this.drawPectoralFin(this.segments[6], false, amp, ph, t);
+        this.drawPelvicFin(this.segments[13], true, amp, ph, t);
+        this.drawPelvicFin(this.segments[13], false, amp, ph, t);
+
+        ctx.restore();
+      }
+
+      drawPectoralFin(seg, isRight, amp, ph, t) {
+        const len = 48 * this.scale * (1 + (this.fat - 1.25) * 0.65);
+        const dir = isRight ? 1 : -1;
+        const flap = Math.sin(t * 1.2 + ph) * amp * dir;
+
+        const angleOffset = Math.PI * 0.75 * dir;
+        const angle = seg.angle + angleOffset + flap;
+
+        const rootX = seg.x, rootY = seg.y;
+        const leadA = angle - 0.3 * dir;
+        const leadX = rootX + Math.cos(leadA) * len * 0.95;
+        const leadY = rootY + Math.sin(leadA) * len * 0.95;
+        const cpLeadX = rootX + Math.cos(angle - 0.6 * dir) * len * 0.7;
+        const cpLeadY = rootY + Math.sin(angle - 0.6 * dir) * len * 0.7;
+
+        const trailA = angle + 0.4 * dir;
+        const trailX = rootX + Math.cos(trailA) * len * 0.65;
+        const trailY = rootY + Math.sin(trailA) * len * 0.65;
+        const cpTrailX = rootX + Math.cos(angle + 0.6 * dir) * len * 0.35;
+        const cpTrailY = rootY + Math.sin(angle + 0.6 * dir) * len * 0.35;
+
+        const tipX = rootX + Math.cos(angle) * len * 1.1;
+        const tipY = rootY + Math.sin(angle) * len * 1.1;
+
+        ctx.beginPath();
+        ctx.moveTo(rootX, rootY);
+        ctx.quadraticCurveTo(cpLeadX, cpLeadY, leadX, leadY);
+        ctx.quadraticCurveTo(tipX, tipY, trailX, trailY);
+        ctx.quadraticCurveTo(cpTrailX, cpTrailY, rootX, rootY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.save();
+        ctx.globalAlpha = 0.25;
+        ctx.lineWidth = 1.0 * this.scale;
+        for (let i = 0; i <= 5; i++) {
+          const rt = i / 5;
+          const rayA = leadA + (trailA - leadA) * rt;
+          const rayLen = len * (0.7 + Math.sin(rt * Math.PI) * 0.35);
+          const flex = Math.sin(this.swimCycle * 1.5 + i * 0.2) * 0.05 * dir;
+
+          const rx = rootX + Math.cos(rayA + flex) * rayLen;
+          const ry = rootY + Math.sin(rayA + flex) * rayLen;
+          const cpx = rootX + Math.cos(rayA + flex * 2) * rayLen * 0.5;
+          const cpy = rootY + Math.sin(rayA + flex * 2) * rayLen * 0.5;
+
+          ctx.beginPath();
+          ctx.moveTo(rootX, rootY);
+          ctx.quadraticCurveTo(cpx, cpy, rx, ry);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      drawPelvicFin(seg, isRight, amp, ph, t) {
+        const len = 26 * this.scale * (1 + (this.fat - 1.25) * 0.55);
+        const dir = isRight ? 1 : -1;
+        const flap = Math.sin(t * 1.15 + ph + 0.9) * (amp * 0.55) * dir;
+
+        const angle = seg.angle + Math.PI * 0.85 * dir + flap;
+        const rootX = seg.x, rootY = seg.y;
+
+        const leadX = rootX + Math.cos(angle - 0.25 * dir) * len;
+        const leadY = rootY + Math.sin(angle - 0.25 * dir) * len;
+        const trailX = rootX + Math.cos(angle + 0.25 * dir) * len * 0.8;
+        const trailY = rootY + Math.sin(angle + 0.25 * dir) * len * 0.8;
+
+        ctx.beginPath();
+        ctx.moveTo(rootX, rootY);
+        ctx.quadraticCurveTo(rootX + Math.cos(angle - 0.4 * dir) * len * 0.6, rootY + Math.sin(angle - 0.4 * dir) * len * 0.6, leadX, leadY);
+        ctx.quadraticCurveTo(rootX + Math.cos(angle) * len * 1.1, rootY + Math.sin(angle) * len * 1.1, trailX, trailY);
+        ctx.quadraticCurveTo(rootX + Math.cos(angle + 0.4 * dir) * len * 0.4, rootY + Math.sin(angle + 0.4 * dir) * len * 0.4, rootX, rootY);
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      drawDorsalFin() {
+        // 背鳍：seg 6–16，离头更远，低矮细长，颜色同其他鳍
+        const S0 = 6, S1 = 16;
+        const n = S1 - S0; // 10 → 11 points (i 0..10)
+        const t = this.swimCycle;
+        const sway = Math.sin(t * 0.95 + this.finPhase) * this.finSwayAmp() * 0.42;
+
+        // 低矮（高度比原来小），胖时更低
+        const maxH = (18 - Math.max(0, this.fat - 1.0) * 3) * this.scale;
+
+        // 11点剖面：峰值在 i=3（seg 9），两端平滑收零
+        const hPro = [0, 0.45, 0.80, 1.00, 0.95, 0.82, 0.65, 0.48, 0.28, 0.10, 0];
+
+        const bx = [], by = []; // 脊线点（鳍根）
+        const rx = [], ry = []; // 鳍脊线（鳍尖）
+
+        for (let i = 0; i <= n; i++) {
+          const seg = this.segments[S0 + i];
+          const h = maxH * hPro[i];
+          // 垂直脊背向上（左侧 = angle - PI/2），随泳动摆动
+          const upA = seg.angle - Math.PI / 2 + sway * hPro[i];
+          bx.push(seg.x); by.push(seg.y);
+          rx.push(seg.x + Math.cos(upA) * h);
+          ry.push(seg.y + Math.sin(upA) * h);
+        }
+
+        ctx.save();
+        ctx.fillStyle   = this.colors.fin;
+        ctx.strokeStyle = this.colors.finEdge;
+        ctx.lineWidth   = 0.9 * this.scale;
+        ctx.globalAlpha = 0.60;
+        ctx.lineJoin = 'round';
+        ctx.lineCap  = 'round';
+
+        // 外形：从前根出发 → 沿鳍脊平滑曲线 → 后根 → 沿脊线返回
+        ctx.beginPath();
+        ctx.moveTo(bx[0], by[0]); // 前根（h=0，与脊线重合）
+
+        // 鳍脊：前进方向用中点平滑贝塞尔
+        const m0x = (rx[0] + rx[1]) * 0.5, m0y = (ry[0] + ry[1]) * 0.5;
+        ctx.lineTo(m0x, m0y);
+        for (let i = 1; i < n; i++) {
+          const mx = (rx[i] + rx[i + 1]) * 0.5;
+          const my = (ry[i] + ry[i + 1]) * 0.5;
+          ctx.quadraticCurveTo(rx[i], ry[i], mx, my);
+        }
+        ctx.lineTo(rx[n], ry[n]); // 后根（h=0，与脊线重合）
+
+        // 脊线底边：向前返回
+        for (let i = n - 1; i >= 0; i--) ctx.lineTo(bx[i], by[i]);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // 鳍条（细射线）
+        ctx.save();
+        ctx.globalAlpha = 0.20;
+        ctx.lineWidth = 0.72 * this.scale;
+        for (let i = 1; i < n; i++) {
+          if (hPro[i] > 0.12) {
+            ctx.beginPath();
+            ctx.moveTo(bx[i], by[i]);
+            ctx.lineTo(rx[i], ry[i]);
+            ctx.stroke();
+          }
+        }
+        ctx.restore();
+
+        ctx.restore();
+      }
+
+      drawCaudalFin() {
+        const tail = this.segments[this.numSegments - 1];
+        const ped  = this.segments[this.numSegments - 2];
+
+        const len   = 38 * this.scale;
+        const wave  = Math.sin(this.swimCycle - 1.0) * 0.08;
+        const angle = tail.angle + Math.PI - wave;
+
+        const ax = (tail.x + ped.x) * 0.5;
+        const ay = (tail.y + ped.y) * 0.5;
+
+        ctx.save();
+        ctx.fillStyle   = this.colors.fin;
+        ctx.strokeStyle = this.colors.finEdge;
+        ctx.lineWidth   = 1.35 * this.scale;
+
+        const spread = 0.85 + Math.sin(this.swimCycle * 1.05 + this.finPhase) * 0.04;
+
+        ctx.beginPath();
+        ctx.moveTo(ax, ay);
+        ctx.quadraticCurveTo(ax + Math.cos(angle - 0.85 * spread) * len * 0.88, ay + Math.sin(angle - 0.85 * spread) * len * 0.88, ax + Math.cos(angle - 0.25 * spread) * len, ay + Math.sin(angle - 0.25 * spread) * len);
+        ctx.quadraticCurveTo(ax + Math.cos(angle) * len * 0.78, ay + Math.sin(angle) * len * 0.78, ax + Math.cos(angle + 0.25 * spread) * len, ay + Math.sin(angle + 0.25 * spread) * len);
+        ctx.quadraticCurveTo(ax + Math.cos(angle + 0.85 * spread) * len * 0.88, ay + Math.sin(angle + 0.85 * spread) * len * 0.88, ax, ay);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.save();
+        ctx.globalAlpha = 0.22;
+        ctx.lineWidth = 0.9 * this.scale;
+        for (let i = 0; i < 7; i++) {
+          const tt = (i / 6) * 0.9 - 0.45;
+          const a  = angle + tt * 0.75;
+          const ex = ax + Math.cos(a) * len * (0.78 + Math.sin(this.swimCycle + i) * 0.015);
+          const ey = ay + Math.sin(a) * len * (0.78 + Math.sin(this.swimCycle + i) * 0.015);
+          ctx.beginPath();
+          ctx.moveTo(ax, ay);
+          ctx.lineTo(ex, ey);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        ctx.restore();
+      }
+
+      drawEye() {
+        const head = this.segments[2];
+        const ex = head.x + Math.cos(head.angle) * 6 * this.scale + Math.cos(head.angle + Math.PI / 2) * 4 * this.scale;
+        const ey = head.y + Math.sin(head.angle) * 6 * this.scale + Math.sin(head.angle + Math.PI / 2) * 4 * this.scale;
+
+        ctx.save();
+        ctx.globalCompositeOperation = "source-over";
+        ctx.fillStyle = "rgba(10, 12, 14, 0.42)";
+        ctx.beginPath(); ctx.arc(ex, ey, 1.7 * this.scale, 0, TWO_PI); ctx.fill();
+
+        ctx.globalCompositeOperation = "screen";
+        ctx.fillStyle = "rgba(255,255,255,0.12)";
+        ctx.beginPath(); ctx.arc(ex - 0.8 * this.scale, ey - 0.7 * this.scale, 0.9 * this.scale, 0, TWO_PI); ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // =========================
+    // Init world
+    // =========================
+    const fishes = [
+      new Koi(width * 0.35, height * 0.45, "showa",    1.95),  // 超大
+      new Koi(width * 0.60, height * 0.55, "kohaku",   1.90),  // 超大
+      new Koi(width * 0.28, height * 0.52, "showa",    1.30),
+      new Koi(width * 0.62, height * 0.42, "kohaku",   1.20),
+      new Koi(width * 0.44, height * 0.68, "yamabuki", 1.15),
+      new Koi(width * 0.76, height * 0.62, "sanke",    1.05),
+      new Koi(width * 0.38, height * 0.32, "kohaku",   0.95),
+      new Koi(width * 0.58, height * 0.78, "yamabuki", 0.85),
+      new Koi(width * 0.18, height * 0.72, "sanke",    0.42),
+      new Koi(width * 0.82, height * 0.28, "kohaku",   0.38),
+    ];
+    const foodParticles = [];
+    const eggs = [];
+
+    function spawnFoodBurst(x, y) {
+      const count = Math.floor(rand(6, 12));
+      for (let i = 0; i < count; i++) {
+        foodParticles.push(new FoodParticle(x + rand(-14, 14), y + rand(-10, 10)));
+      }
+      if (foodParticles.length > 150) foodParticles.splice(0, foodParticles.length - 150);
+    }
+
+    function hatchEgg(egg) {
+      const _types = ["kohaku", "yamabuki", "sanke", "showa"];
+      const babyType = _types[Math.floor(Math.random() * 4)];
+      const baby = new Koi(egg.x + rand(-18, 18), egg.y + rand(-18, 18), babyType, rand(0.35, 0.45));
+      baby.fat = 1.25;
+      baby.fatTarget = 1.25;
+      fishes.push(baby);
+    }
+
+    container.addEventListener("mousedown", (e) => {
+      const rect = canvasRect || canvas.getBoundingClientRect();
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+
+      for (let i = eggs.length - 1; i >= 0; i--) {
+        if (eggs[i].hitTest(px, py)) { hatchEgg(eggs.splice(i, 1)[0]); return; }
+      }
+
+      if (feedMode) {
+        spawnFoodBurst(px, py);
+      } else {
+        // 普通模式：点到鱼会受惊逃窜
+        for (const f of fishes) {
+          const dHead = dist(f.x, f.y, px, py);
+          const dMid  = dist(f.segments[11].x, f.segments[11].y, px, py);
+          if (Math.min(dHead, dMid) < f.baseScale * 60 + 18) {
+            f.angle = Math.atan2(f.y - py, f.x - px); // 背向点击冲出
+            f.currentSpeed = f.chaseSpeed * 1.6;
+            f.targetFood = null;
+          }
+        }
+      }
+    });
+
+    container.addEventListener("touchstart", (e) => {
+      const rect = canvasRect || canvas.getBoundingClientRect();
+      const t = e.touches && e.touches[0];
+      if (!t) return;
+
+      const px = t.clientX - rect.left;
+      const py = t.clientY - rect.top;
+
+      for (let i = eggs.length - 1; i >= 0; i--) {
+        if (eggs[i].hitTest(px, py)) { hatchEgg(eggs.splice(i, 1)[0]); return; }
+      }
+      if (feedMode) spawnFoodBurst(px, py);
+    }, { passive: true });
+
+    // =========================
+    // Render
+    // =========================
+    function drawBackground() {
+      // ✅ 纯黑背景（无渐变）
+      ctx.globalCompositeOperation = "source-over";
+      ctx.fillStyle = "#020305";
+      ctx.fillRect(0, 0, width, height);
+    }
+
+    function drawLilyPads() {
+      // 清空荷叶层（否则会拖影叠成团）
+      padCtx.clearRect(0, 0, width, height);
+
+      const SEGS = quality ? 64 : 40;
+
+      padCtx.save();
+      padCtx.globalCompositeOperation = "screen";
+
+      for (const pad of lilyPads) {
+        pad.phase += pad.speed;
+
+        padCtx.save();
+        padCtx.translate(pad.x, pad.y);
+        padCtx.rotate(pad.rotation);
+
+        padCtx.fillStyle = `rgba(255,255,255,${pad.alpha})`;
+
+        padCtx.shadowColor = `rgba(255,255,255,${pad.alpha})`;
+        padCtx.shadowBlur  = quality ? pad.r * 0.18 : pad.r * 0.10;
+
+        padCtx.beginPath();
+        for (let i = 0; i <= SEGS; i++) {
+          const a = (i / SEGS) * TWO_PI;
+          const notch = 1 - Math.pow(Math.cos(a / 2), 20) * 0.3;
+          const ripple =
+            1 +
+            Math.sin(a * 4 + pad.seed + pad.phase) * 0.03 +
+            Math.sin(a * 7 + pad.seed * 1.5 - pad.phase * 0.7) * 0.015;
+
+          const rr = pad.r * ripple * notch;
+          const x = Math.cos(a) * rr;
+          const y = Math.sin(a) * rr;
+
+          if (i === 0) padCtx.moveTo(x, y);
+          else padCtx.lineTo(x, y);
+        }
+        padCtx.closePath();
+        padCtx.fill();
+
+        // 叶脉：从切口中心向外放射，略带弧度（batch into one stroke call）
+        padCtx.shadowBlur = 0;
+        padCtx.lineWidth = quality ? 0.55 : 0.35;
+        padCtx.strokeStyle = `rgba(255,255,255,${pad.alpha * 0.5})`;
+        const numVeins = 11;
+        const skipAngle = 0.42; // 切口两侧各留空
+        const veinsSpan = TWO_PI - skipAngle * 2;
+        padCtx.beginPath();
+        for (let v = 0; v < numVeins; v++) {
+          const va = skipAngle + ((v + 0.5) / numVeins) * veinsSpan;
+          const vNotch = 1 - Math.pow(Math.cos(va / 2), 20) * 0.3;
+          const vRipple = 1 + Math.sin(va * 4 + pad.seed + pad.phase) * 0.03
+                            + Math.sin(va * 7 + pad.seed * 1.5 - pad.phase * 0.7) * 0.015;
+          const edgeR = pad.r * vRipple * vNotch * 0.83;
+          const cpA = va + Math.sin(v * 1.7 + pad.seed) * 0.07;
+          padCtx.moveTo(0, 0);
+          padCtx.quadraticCurveTo(
+            Math.cos(cpA) * edgeR * 0.48, Math.sin(cpA) * edgeR * 0.48,
+            Math.cos(va) * edgeR, Math.sin(va) * edgeR
+          );
+        }
+        padCtx.stroke();
+
+        padCtx.restore();
+      }
+
+      padCtx.restore();
+    }
+
+    function animate(now) {
+      drawBackground();
+
+      for (let i = foodParticles.length - 1; i >= 0; i--) {
+        const p = foodParticles[i];
+        p.update();
+        if (!p.alive) foodParticles.splice(i, 1);
+      }
+      for (const p of foodParticles) p.draw();
+
+      for (let i = eggs.length - 1; i >= 0; i--) {
+        const egg = eggs[i];
+        egg.update(); egg.draw();
+        if (now - egg.birthTime >= 5000) {
+          hatchEgg(egg);
+          eggs.splice(i, 1);
+        }
+      }
+
+      for (const f of fishes) { f.update(fishes, foodParticles, eggs); f.draw(); }
+
+      drawLilyPads();
+
+      requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>数字山水 - 气韵生动（v14：鸟群修复 + 山腰世界雾带）</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body{
+      width: 100%; height: 100%;
+      margin: 0; overflow: hidden;
+      background: #fff;
+      font-family: 'STSong','SimSun',serif;
+    }
+    #canvas-container{
+      position: absolute; inset: 0;
+      z-index: 1;
+      opacity: 0;
+      transition: opacity 1.2s ease-in;
+    }
+    #loading-tip{
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 16px; color: #111;
+      letter-spacing: 0.5em;
+      z-index: 9999;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 15px;
+      user-select: none;
+    }
+    .progress-bar{ width: 180px; height: 1px; background: #EEE; position: relative; overflow: hidden; }
+    #progress-fill{ position: absolute; left: 0; top: 0; height: 100%; width: 0%; background: #111; }
+
+    .ui{ position: absolute; inset: 0; pointer-events: none; z-index: 5; color: #111; }
+    .brand{ position: absolute; top: 40px; right: 5vw; text-align: right; }
+    .brand .zh{ font-size: clamp(28px,4vw,56px); font-weight: 900; letter-spacing: 0.4em; }
+    .brand .en{ font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: #666; margin-top: 5px; }
+    .side-text{ position: absolute; top: 50%; right: 5vw; transform: translateY(-50%); writing-mode: vertical-rl; letter-spacing: 1.2em; font-weight: 900; }
+    .hint{
+      position: absolute; left: 5vw; bottom: 28px;
+      font-size: 10px; letter-spacing: 0.2em; color: #666;
+      user-select: none; pointer-events: none;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+<div id="loading-tip">
+  <div>运 笔 点 苔</div>
+  <div class="progress-bar"><div id="progress-fill"></div></div>
+  <div id="loading-text">0%</div>
+</div>
+
+<div id="canvas-container"></div>
+
+<div class="ui">
+  <div class="brand">
+    <div class="zh">气韵生动</div>
+    <div class="en">Peak Ink · Waist Mist · Bird Burst (v14)</div>
+  </div>
+  <div class="side-text">墨 积 如 山</div>
+  <div class="hint">鼠标移到山上：惊起飞鸟（点击更强）</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  'use strict';
+
+  // ================= Shaders =================
+  const vertCommon = `
+    uniform float uTime;
+    attribute float aSize;
+    attribute float aAlpha;
+    varying float vAlpha;
+    void main() {
+      vec3 pos = position;
+      pos.y += sin(uTime * 0.32 + pos.x * 0.007) * 0.10;
+      vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+      gl_Position = projectionMatrix * mvPosition;
+      float size = aSize * (900.0 / -mvPosition.z);
+      gl_PointSize = clamp(size, 1.0, 38.0);
+      vAlpha = aAlpha;
+    }
+  `;
+  const fragStructure = `
+    uniform vec3 uColor; varying float vAlpha;
+    void main() {
+      float d = distance(gl_PointCoord, vec2(0.5));
+      float shape = smoothstep(0.60, 0.11, d);
+      float a = vAlpha * shape;
+      if (a < 0.01) discard;
+      gl_FragColor = vec4(uColor, a);
+    }
+  `;
+  const fragMoss = `
+    uniform vec3 uColor; varying float vAlpha;
+    void main() {
+      float d = distance(gl_PointCoord, vec2(0.5));
+      float core = smoothstep(0.30, 0.00, d);
+      float edge = smoothstep(0.54, 0.14, d);
+      float shape = mix(edge, 1.0, core * 0.35);
+      float a = vAlpha * shape;
+      if (a < 0.01) discard;
+      gl_FragColor = vec4(uColor, a);
+    }
+  `;
+  const vertTree = `
+    attribute float aSize;
+    attribute float aAlpha;
+    varying float vAlpha;
+    void main() {
+      vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+      gl_Position = projectionMatrix * mvPosition;
+      float size = aSize * (900.0 / -mvPosition.z);
+      gl_PointSize = clamp(size, 2.0, 78.0);
+      vAlpha = aAlpha;
+    }
+  `;
+  const fragTree = `
+    uniform sampler2D uMap;
+    uniform vec3 uColor;
+    varying float vAlpha;
+    void main() {
+      vec4 tex = texture2D(uMap, gl_PointCoord);
+      float a = tex.a * vAlpha;
+      if (a < 0.06) discard;
+      gl_FragColor = vec4(uColor, a);
+    }
+  `;
+
+  // 飞鸟粒子
+  const vertBird = `
+    attribute float aSize;
+    attribute float aAlpha;
+    varying float vAlpha;
+    void main() {
+      vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+      gl_Position = projectionMatrix * mvPosition;
+      float size = aSize * (900.0 / -mvPosition.z);
+      gl_PointSize = clamp(size, 1.0, 22.0);
+      vAlpha = aAlpha;
+    }
+  `;
+  const fragBird = `
+    uniform vec3 uColor;
+    varying float vAlpha;
+    void main() {
+      float d = distance(gl_PointCoord, vec2(0.5));
+      float shape = smoothstep(0.55, 0.10, d);
+      float a = vAlpha * shape;
+      if (a < 0.01) discard;
+      gl_FragColor = vec4(uColor, a);
+    }
+  `;
+
+  // 屏幕空间薄雾（保留但更轻）
+  const vertFogScreen = `
+    varying vec2 vUv;
+    void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
+  `;
+  const fragFogScreen = `
+    precision highp float;
+    uniform float uTime;
+    uniform vec2 uRes;
+    varying vec2 vUv;
+
+    float hash21(vec2 p){
+      p = fract(p*vec2(123.34, 345.45));
+      p += dot(p, p+34.345);
+      return fract(p.x*p.y);
+    }
+    float noise(vec2 p){
+      vec2 i = floor(p);
+      vec2 f = fract(p);
+      float a = hash21(i);
+      float b = hash21(i + vec2(1.0,0.0));
+      float c = hash21(i + vec2(0.0,1.0));
+      float d = hash21(i + vec2(1.0,1.0));
+      vec2 u = f*f*(3.0-2.0*f);
+      return mix(mix(a,b,u.x), mix(c,d,u.x), u.y);
+    }
+    float fbm(vec2 p){
+      float v = 0.0;
+      float a = 0.55;
+      for(int i=0;i<5;i++){
+        v += a * noise(p);
+        p = p*2.02 + vec2(17.0, 29.0);
+        a *= 0.5;
+      }
+      return v;
+    }
+
+    void main(){
+      float yMask = smoothstep(0.98, 0.40, vUv.y);
+
+      vec2 aspect = vec2(uRes.x/uRes.y, 1.0);
+      vec2 p1 = vUv * aspect * 2.2 + vec2(uTime*0.030, -uTime*0.018);
+      vec2 p2 = vUv * aspect * 3.5 + vec2(-uTime*0.018, uTime*0.026);
+
+      float m = fbm(p1)*0.62 + fbm(p2)*0.48;
+      float fog = smoothstep(0.35, 0.72, m);
+
+      // 中央留白
+      float centerGap = 1.0 - smoothstep(0.15, 0.55, abs(vUv.x - 0.5));
+
+      float a = fog * yMask * (0.30 + 0.70*centerGap);
+      a = clamp(a * 0.14, 0.0, 0.10);
+      gl_FragColor = vec4(vec3(1.0), a);
+    }
+  `;
+
+  // 世界空间“山腰雾带”（关键：你要山腰能看到流动）
+  const vertMistWorld = `
+    varying vec2 vXZ;
+    varying float vZ;
+    void main(){
+      vec4 wp = modelMatrix * vec4(position, 1.0);
+      vXZ = wp.xz;
+      vZ  = wp.z;
+      gl_Position = projectionMatrix * viewMatrix * wp;
+    }
+  `;
+  const fragMistWorld = `
+    precision highp float;
+    uniform float uTime;
+    uniform float uStrength;
+    varying vec2 vXZ;
+    varying float vZ;
+
+    float hash21(vec2 p){
+      p = fract(p*vec2(123.34, 345.45));
+      p += dot(p, p+34.345);
+      return fract(p.x*p.y);
+    }
+    float noise(vec2 p){
+      vec2 i = floor(p);
+      vec2 f = fract(p);
+      float a = hash21(i);
+      float b = hash21(i + vec2(1.0,0.0));
+      float c = hash21(i + vec2(0.0,1.0));
+      float d = hash21(i + vec2(1.0,1.0));
+      vec2 u = f*f*(3.0-2.0*f);
+      return mix(mix(a,b,u.x), mix(c,d,u.x), u.y);
+    }
+    float fbm(vec2 p){
+      float v = 0.0;
+      float a = 0.55;
+      for(int i=0;i<6;i++){
+        v += a * noise(p);
+        p = p*2.02 + vec2(19.0, 31.0);
+        a *= 0.5;
+      }
+      return v;
+    }
+
+    void main(){
+      // 世界坐标流动：两层不同方向
+      vec2 p1 = vXZ * 0.0016 + vec2(uTime*0.030, uTime*0.012);
+      vec2 p2 = vXZ * 0.0026 + vec2(-uTime*0.020, uTime*0.020);
+
+      float n = fbm(p1)*0.62 + fbm(p2)*0.52;
+
+      // 带状结构（更像雾带流过山腰）
+      float band = smoothstep(0.42, 0.76, n);
+      float wisps = smoothstep(0.18, 0.55, n) - smoothstep(0.60, 0.90, n);
+      float fog = clamp(band*0.75 + wisps*0.55, 0.0, 1.0);
+
+      // 限定在“山腰区域”的 z 段（你画面主要山在 z≈[-1200,600]）
+      float zMask = smoothstep(-1100.0, -200.0, vZ) * (1.0 - smoothstep(220.0, 720.0, vZ));
+
+      // 中央河道更空
+      float centerGap = 1.0 - smoothstep(0.0, 520.0, abs(vXZ.x));
+
+      float a = fog * zMask * (0.35 + 0.65*centerGap) * uStrength;
+
+      // 白雾上限：不要把墨洗掉
+      a = clamp(a, 0.0, 0.32);
+
+      gl_FragColor = vec4(vec3(1.0), a);
+    }
+  `;
+
+  // ================= Utils =================
+  function hash(n){ return Math.abs(Math.sin(n) * 10000.0) % 1.0; }
+  function mix(a,b,t){ return a*(1.0-t) + b*t; }
+  function clamp(x,a,b){ return Math.max(a, Math.min(b, x)); }
+  function smoothstep(e0,e1,x){
+    let t = clamp((x-e0)/(e1-e0), 0, 1);
+    return t*t*(3-2*t);
+  }
+
+  // ================= Heightfield helpers =================
+  function noise2D(x,z){
+    const ix=Math.floor(x), iz=Math.floor(z);
+    const fx=x-ix, fz=z-iz;
+    const ux=fx*fx*(3.0-2.0*fx);
+    const n00=hash(ix + iz*57);
+    const n10=hash(ix+1 + iz*57);
+    const n01=hash(ix + (iz+1)*57);
+    const n11=hash(ix+1 + (iz+1)*57);
+    return mix(mix(n00,n10,ux), mix(n01,n11,ux), fz);
+  }
+  function fbm2(x,z,oct=5){
+    let v=0, a=0.5;
+    for(let i=0;i<oct;i++){
+      v += a*noise2D(x,z);
+      x = x*2.05 + 100;
+      z = z*2.25 + 100;
+      a *= 0.5;
+    }
+    return v;
+  }
+  function ridge1D(x){
+    let n = fbm2(x*0.0012, 10.0, 5);
+    let r = 1.0 - Math.abs(n-0.5)*2.0;
+    r = Math.pow(Math.max(0,r), 2.2);
+    let cut = fbm2(x*0.004, 200.0, 3);
+    cut = smoothstep(0.25, 0.75, cut);
+    return r*cut;
+  }
+  function bandMask(z,center,width,power=2.0){
+    let d = Math.abs(z-center)/width;
+    return Math.pow(Math.max(0,1.0-d), power);
+  }
+  function centralMistFactor(x){
+    return 1.0 - Math.exp(-Math.pow(x/420.0, 2.0));
+  }
+  function riverFactor(z){
+    const riverCenter = -80.0;
+    const riverWidth  = 260.0;
+    const d = (z-riverCenter)/riverWidth;
+    return 1.0 - Math.exp(-(d*d));
+  }
+  function leftBias(x){
+    const t = smoothstep(1200.0, -1200.0, x);
+    return clamp(0.35 + 0.85*t, 0.35, 1.20);
+  }
+
+  // ================= Optimized Terrain Cache =================
+  const terrainCache = new Map();
+  const Q = 8;
+  function keyOf(x,z){
+    const qx = Math.round(x/Q)*Q;
+    const qz = Math.round(z/Q)*Q;
+    return qx + ',' + qz;
+  }
+  function getTerrainData(x,z){
+    const k = keyOf(x,z);
+    const hit = terrainCache.get(k);
+    if (hit) return hit;
+
+    const near = bandMask(z,  220, 460, 1.6);
+    const mid  = bandMask(z, -160, 560, 1.8);
+    const far  = bandMask(z, -720, 720, 2.2);
+
+    let sNear = ridge1D(x +  80)  * 250;
+    let sMid  = ridge1D(x + 120)  * 980;
+    let sFar  = ridge1D(x + 720)  * 320;
+
+    let texN = fbm2(x*0.003, z*0.004, 4);
+    let texR = 1.0 - Math.abs(texN-0.5)*2.0;
+    texR = Math.pow(Math.max(0,texR), 2.8);
+
+    let h = near*(sNear + texR*150) + mid*(sMid + texR*290) + far*(sFar + texR*110);
+
+    let cm = centralMistFactor(x);
+    let rf = riverFactor(z);
+    let gap = (0.22 + 0.78*rf) * (0.25 + 0.75*cm);
+
+    let rightFade = mix(1.0, 0.62, smoothstep(0.0, 1400.0, x));
+    let lb = leftBias(x);
+
+    h *= gap * rightFade * lb;
+    h -= (z*0.25);
+
+    const out = { h: h-520.0, ridge: texR, cm: cm, rf: rf, lb: lb };
+    terrainCache.set(k, out);
+    return out;
+  }
+
+  // ================= Tree texture =================
+  function makeTreeTexture() {
+    const c = document.createElement('canvas');
+    c.width = 64; c.height = 64;
+    const g = c.getContext('2d');
+    g.clearRect(0,0,64,64);
+
+    function blob(cx, cy, r, a) {
+      g.fillStyle = `rgba(0,0,0,${a})`;
+      g.beginPath();
+      g.arc(cx, cy, r, 0, Math.PI*2);
+      g.fill();
+    }
+    blob(30, 22, 11, 0.95);
+    blob(22, 28, 10, 0.80);
+    blob(40, 28,  9, 0.80);
+    blob(30, 34, 10, 0.75);
+    blob(34, 20,  7, 0.65);
+    g.fillStyle = 'rgba(0,0,0,0.90)';
+    g.fillRect(29, 36, 6, 19);
+    g.fillStyle = 'rgba(0,0,0,0.35)';
+    g.fillRect(28, 54, 8, 5);
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.minFilter = THREE.LinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.generateMipmaps = false;
+    return tex;
+  }
+
+  // ================= Terrain raycast (FIX BIRDS) =================
+  // 用射线在高度场上做“找交点”：先粗采样找符号变化，再二分
+  function intersectTerrain(ray, outVec3){
+    const origin = ray.origin;
+    const dir = ray.direction;
+
+    // 只考虑向前的射线
+    const T_MAX = 6500.0;
+    const STEP = 90.0;
+
+    let prevT = 0.0;
+    let prevDiff = null;
+
+    for (let t = 0.0; t <= T_MAX; t += STEP){
+      const px = origin.x + dir.x * t;
+      const py = origin.y + dir.y * t;
+      const pz = origin.z + dir.z * t;
+
+      // 限定到我们的地形范围内
+      if (px < -2600 || px > 2600 || pz < -1200 || pz > 600) continue;
+
+      const th = getTerrainData(px, pz).h;
+      const diff = py - th; // >0 在地形上方，<0 在地形下方
+
+      if (prevDiff !== null && prevDiff > 0.0 && diff <= 0.0){
+        // bracket: [prevT, t]
+        let a = prevT, b = t;
+        for (let it=0; it<18; it++){
+          const m = (a+b)*0.5;
+          const mx = origin.x + dir.x * m;
+          const my = origin.y + dir.y * m;
+          const mz = origin.z + dir.z * m;
+          const mh = getTerrainData(mx, mz).h;
+          const md = my - mh;
+          if (md > 0.0) a = m; else b = m;
+        }
+        const hitT = b;
+        outVec3.set(
+          origin.x + dir.x * hitT,
+          origin.y + dir.y * hitT,
+          origin.z + dir.z * hitT
+        );
+        return true;
+      }
+
+      prevT = t;
+      prevDiff = diff;
+    }
+    return false;
+  }
+
+  // ================= Three core =================
+  let scene, camera, renderer;
+  const container = document.getElementById('canvas-container');
+  const fillBar = document.getElementById('progress-fill');
+  const loadText = document.getElementById('loading-text');
+
+  // Bird system
+  const MAX_BIRDS = 3600;
+  let birdPos, birdVel, birdLife, birdAlpha, birdSize;
+  let birdGeom, birdMat, birdPoints;
+  let lastTime = performance.now();
+  let lastBurstTime = 0;
+
+  // Mouse interaction
+  const raycaster = new THREE.Raycaster();
+  const mouseNDC = new THREE.Vector2();
+  const hitPoint = new THREE.Vector3();
+
+  function initBirds(){
+    birdPos = new Float32Array(MAX_BIRDS * 3);
+    birdVel = new Float32Array(MAX_BIRDS * 3);
+    birdLife = new Float32Array(MAX_BIRDS);
+    birdAlpha = new Float32Array(MAX_BIRDS);
+    birdSize = new Float32Array(MAX_BIRDS);
+
+    for (let i=0;i<MAX_BIRDS;i++){
+      birdLife[i] = 0;
+      birdAlpha[i] = 0;
+      birdSize[i] = 3.0;
+      birdPos[i*3+0] = 0;
+      birdPos[i*3+1] = -9999;
+      birdPos[i*3+2] = 0;
+    }
+
+    birdGeom = new THREE.BufferGeometry();
+    birdGeom.setAttribute('position', new THREE.BufferAttribute(birdPos, 3).setUsage(THREE.DynamicDrawUsage));
+    birdGeom.setAttribute('aAlpha', new THREE.BufferAttribute(birdAlpha, 1).setUsage(THREE.DynamicDrawUsage));
+    birdGeom.setAttribute('aSize',  new THREE.BufferAttribute(birdSize, 1).setUsage(THREE.DynamicDrawUsage));
+
+    birdMat = new THREE.ShaderMaterial({
+      vertexShader: vertBird,
+      fragmentShader: fragBird,
+      uniforms: { uColor: { value: new THREE.Color(0x0f0f0f) } },
+      transparent: true,
+      blending: THREE.NormalBlending,
+      depthWrite: false
+    });
+
+    birdPoints = new THREE.Points(birdGeom, birdMat);
+    birdPoints.renderOrder = 60; // 在雾带之上也可见
+    scene.add(birdPoints);
+  }
+
+  function spawnBirdBurst(worldX, worldZ, intensity=1.0){
+    const now = performance.now();
+    if (now - lastBurstTime < 120) return;
+    lastBurstTime = now;
+
+    const t = getTerrainData(worldX, worldZ);
+    // 放宽判定：你之前“鸟没有”的很大概率是这里被卡了
+    if (t.h < -340) return;
+
+    const N = Math.floor(220 * intensity);
+
+    for (let n=0; n<N; n++){
+      let idx = -1;
+      for (let i=0;i<MAX_BIRDS;i++){
+        if (birdLife[i] <= 0.0) { idx = i; break; }
+      }
+      if (idx < 0) break;
+
+      const i3 = idx*3;
+
+      const a = (hash(idx*12.7 + now*0.001) * Math.PI * 2);
+      const r = 8 + 32 * hash(idx*3.3 + now*0.002);
+
+      const px = worldX + Math.cos(a) * r;
+      const pz = worldZ + Math.sin(a) * r;
+
+      const tp = getTerrainData(px, pz);
+      const py = tp.h + 22 + 14 * hash(idx*8.1);
+
+      birdPos[i3+0] = px;
+      birdPos[i3+1] = py;
+      birdPos[i3+2] = pz;
+
+      const out = 1.05 + 2.15 * hash(idx*1.9 + now*0.0015);
+      const up  = 1.15 + 2.45 * hash(idx*5.5 + now*0.0011);
+
+      birdVel[i3+0] = Math.cos(a) * out * 170;
+      birdVel[i3+1] = up * 190;
+      birdVel[i3+2] = Math.sin(a) * out * 170;
+
+      birdLife[idx] = 1.25 + 1.05 * hash(idx*9.9 + now*0.0009);
+      birdAlpha[idx] = 0.0;
+      birdSize[idx]  = 3.2 + 6.2 * hash(idx*4.2);
+    }
+
+    birdGeom.attributes.position.needsUpdate = true;
+    birdGeom.attributes.aAlpha.needsUpdate = true;
+    birdGeom.attributes.aSize.needsUpdate = true;
+  }
+
+  function updateBirds(dt){
+    const gravity = 82;
+    const drag = 0.988;
+
+    for (let i=0;i<MAX_BIRDS;i++){
+      let life = birdLife[i];
+      if (life <= 0) continue;
+
+      life -= dt;
+      birdLife[i] = life;
+
+      const i3 = i*3;
+      birdPos[i3+0] += birdVel[i3+0] * dt;
+      birdPos[i3+1] += birdVel[i3+1] * dt;
+      birdPos[i3+2] += birdVel[i3+2] * dt;
+
+      birdVel[i3+0] *= drag;
+      birdVel[i3+2] *= drag;
+      birdVel[i3+1] = birdVel[i3+1] * drag - gravity * dt;
+
+      const norm = clamp(life / 2.2, 0, 1);
+      const fadeIn  = smoothstep(0.0, 0.18, 1.0 - norm);
+      const fadeOut = smoothstep(0.0, 0.55, norm);
+      birdAlpha[i] = 0.88 * fadeIn * fadeOut;
+
+      if (life <= 0) {
+        birdAlpha[i] = 0;
+        birdPos[i3+1] = -9999;
+      }
+    }
+
+    birdGeom.attributes.position.needsUpdate = true;
+    birdGeom.attributes.aAlpha.needsUpdate = true;
+    birdGeom.attributes.aSize.needsUpdate = true;
+  }
+
+  // ================= Main Init =================
+  async function init(){
+    scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0xFFFFFF, 0.00026);
+
+    camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 1, 7000);
+    camera.position.set(0, 240, 2450);
+
+    renderer = new THREE.WebGLRenderer({ antialias:false, alpha:true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0xFFFFFF, 1);
+    container.appendChild(renderer.domElement);
+
+    // ===== Screen fog overlay =====
+    const fogMeshScreen = new THREE.Mesh(
+      new THREE.PlaneGeometry(2,2),
+      new THREE.ShaderMaterial({
+        vertexShader: vertFogScreen,
+        fragmentShader: fragFogScreen,
+        uniforms: {
+          uTime: { value: 0 },
+          uRes: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }
+        },
+        transparent: true,
+        depthWrite: false,
+        depthTest: false,
+        blending: THREE.NormalBlending
+      })
+    );
+    fogMeshScreen.frustumCulled = false;
+    fogMeshScreen.renderOrder = 95;
+    scene.add(fogMeshScreen);
+
+    // ===== World mist belts (mountain waist) =====
+    // 两层雾带：不同高度/强度，形成“流动山腰云”
+    const mistMat1 = new THREE.ShaderMaterial({
+      vertexShader: vertMistWorld,
+      fragmentShader: fragMistWorld,
+      uniforms: { uTime: { value: 0 }, uStrength: { value: 0.26 } },
+      transparent: true,
+      depthWrite: false,
+      depthTest: true,
+      blending: THREE.NormalBlending
+    });
+    const mist1 = new THREE.Mesh(new THREE.PlaneGeometry(6200, 2200, 1, 1), mistMat1);
+    mist1.rotation.x = -Math.PI/2;
+    mist1.position.y = -140;        // 山腰高度
+    mist1.position.z = -260;        // 略偏中景
+    mist1.renderOrder = 40;
+    scene.add(mist1);
+
+    const mistMat2 = new THREE.ShaderMaterial({
+      vertexShader: vertMistWorld,
+      fragmentShader: fragMistWorld,
+      uniforms: { uTime: { value: 0 }, uStrength: { value: 0.18 } },
+      transparent: true,
+      depthWrite: false,
+      depthTest: true,
+      blending: THREE.NormalBlending
+    });
+    const mist2 = new THREE.Mesh(new THREE.PlaneGeometry(6200, 2200, 1, 1), mistMat2);
+    mist2.rotation.x = -Math.PI/2;
+    mist2.position.y = -220;        // 更低一层
+    mist2.position.z = -420;
+    mist2.renderOrder = 35;
+    scene.add(mist2);
+
+    // ===== Mountains =====
+    const positions=[], sizes=[], alphas=[];
+    const mossPos=[], mossSize=[], mossAlpha=[];
+    const treePos=[], treeSize=[], treeAlpha=[];
+
+    const lx=-0.82, ly=0.42, lz=-0.36;
+    const extX=2600, minZ=-1200, maxZ=600;
+    const cellSize=14.0, density=80.0;
+
+    const totalSteps = Math.floor((extX*2)/cellSize);
+    let lastYield = performance.now();
+
+    const rd = 20.0;
+
+    for(let cx=-extX, step=0; cx<=extX; cx+=cellSize, step++){
+      for(let cz=minZ; cz<=maxZ; cz+=cellSize){
+        const tx=cx+cellSize/2, tz=cz+cellSize/2;
+        const t=getTerrainData(tx,tz);
+        if(t.h < -330) continue;
+
+        const eps=5.0;
+        const hx = getTerrainData(tx+eps,tz).h;
+        const hz = getTerrainData(tx,tz+eps).h;
+        let nx=-(hx-t.h)/eps, nz=-(hz-t.h)/eps, ny=1.0;
+        const l=Math.sqrt(nx*nx+ny*ny+nz*nz);
+        nx/=l; ny/=l; nz/=l;
+
+        const dot = nx*lx + ny*ly + nz*lz;
+        const shadow = Math.pow(smoothstep(0.25, -0.78, dot), 3.2);
+        const depth = smoothstep(minZ, maxZ, cz);
+
+        const riverCut = (0.25+0.75*t.rf) * (0.35+0.65*t.cm);
+        const peakBoost = smoothstep(60, 520, t.h);
+        const ridgeBoost = Math.pow(t.ridge, 4.2);
+        const densityBias = Math.pow(t.lb, 1.2);
+
+        const heightGrad = Math.pow(smoothstep(-360, 240, t.h), 1.75);
+        const fogBase = 1.0 - smoothstep(-380, -200, t.h);
+        const mistLift = 1.0 - 0.18 * fogBase;
+        const leftMistBoost = mix(0.98, 1.06, smoothstep(300, -900, tx));
+        const peakInk = 1.0 + 1.10 * peakBoost;
+        const gradFinal = clamp((0.82 + 1.20*heightGrad) * mistLift * leftMistBoost * peakInk, 0.72, 2.20);
+
+        let probStructure = ridgeBoost*3.2 + shadow*1.85 + peakBoost*1.40;
+        probStructure *= riverCut * mix(0.18, 1.48, depth) * densityBias;
+        probStructure *= (1.05 + 1.55*heightGrad);
+
+        let count = Math.min(42, Math.floor(probStructure * density));
+        for(let p=0;p<count;p++){
+          const sid = (Math.floor(tx/18)+Math.floor(tz/18)*911)*37.1 + p*13.7;
+          const rx=hash(sid*1.3), rz=hash(sid*7.9);
+          const px=cx+rx*cellSize, pz=cz+rz*cellSize;
+          const tp=getTerrainData(px,pz);
+
+          positions.push(px, tp.h, pz);
+          sizes.push(mix(2.0, 6.0, depth) + shadow*3.2 + ridgeBoost*2.4 + peakBoost*2.4 + heightGrad*2.0);
+
+          let a = mix(0.48, 1.20, depth) * Math.pow(riverCut, 0.68);
+          a *= (0.95 + 0.55*shadow);
+          a += 0.10*ridgeBoost + 0.16*peakBoost;
+          a *= mix(1.0, 0.86, smoothstep(0.0, 1600.0, tx));
+          a *= gradFinal;
+
+          alphas.push(clamp(a, 0.14, 0.99));
+        }
+
+        // Moss
+        const slope = 1.0 - ny;
+        const nearBoost = smoothstep(0.18, 0.86, depth);
+        const slopeGood = smoothstep(0.08, 0.22, slope) * (1.0 - smoothstep(0.28, 0.55, slope));
+        const textureGood = smoothstep(0.35, 0.85, t.ridge);
+        const heightGood = smoothstep(-140, 260, t.h);
+        const shadowSide = smoothstep(0.18, -0.55, dot);
+        const mistReject = smoothstep(0.25, 0.75, t.cm) * smoothstep(0.25, 0.75, t.rf);
+
+        let mossClusterProb = nearBoost*slopeGood*textureGood*heightGood*(0.35+0.65*shadowSide)*mistReject;
+        mossClusterProb *= Math.pow(t.lb, 1.25);
+        mossClusterProb *= mix(1.0, 0.55, smoothstep(0.0, 1400.0, tx));
+
+        const cellID = Math.floor(tx/52)+Math.floor(tz/52)*999;
+        const seed = hash(cellID*12.345);
+
+        if(seed < mossClusterProb*0.70){
+          const cxm = cx + (hash(cellID*3.1)*0.8+0.1)*cellSize;
+          const czm = cz + (hash(cellID*7.7)*0.8+0.1)*cellSize;
+          let k = Math.min(26, 7 + Math.floor(14*nearBoost*Math.pow(t.lb, 1.1)));
+
+          for(let m=0;m<k;m++){
+            const ang = hash(cellID*91.7 + m*13.3)*Math.PI*2;
+            const rad = hash(cellID*44.2 + m*9.9)*18*(0.55+0.90*nearBoost);
+            const px = cxm + Math.cos(ang)*rad;
+            const pz = czm + Math.sin(ang)*rad;
+            const tp = getTerrainData(px, pz);
+
+            mossPos.push(px, tp.h, pz);
+            mossSize.push(6.0 + 12.0*nearBoost + 6.0*textureGood);
+            mossAlpha.push(clamp((0.60 + 0.46*nearBoost) * (0.88 + 0.62*heightGrad), 0.28, 0.99));
+          }
+        }
+
+        // Trees
+        const rC  = t.ridge;
+        const rX1 = getTerrainData(tx + rd, tz).ridge;
+        const rX0 = getTerrainData(tx - rd, tz).ridge;
+        const rZ1 = getTerrainData(tx, tz + rd).ridge;
+        const rZ0 = getTerrainData(tx, tz - rd).ridge;
+        const isRidgeMax = (rC > rX1 - 0.02 && rC > rX0 - 0.02 && rC > rZ1 - 0.02 && rC > rZ0 - 0.02);
+
+        const treeDepth = smoothstep(0.25, 0.92, depth);
+        const mistOK = smoothstep(0.28, 0.78, t.cm) * smoothstep(0.28, 0.82, t.rf);
+        const rightKill = mix(1.0, 0.22, smoothstep(0.0, 1500.0, tx));
+        const heightOK = smoothstep(-380, 180, t.h);
+        const ridgeOK = smoothstep(0.18, 0.56, rC);
+
+        let treeProb =
+          (isRidgeMax ? 1.0 : 0.0) *
+          treeDepth * mistOK * heightOK * ridgeOK *
+          (0.55 + 0.55*shadow) *
+          Math.pow(t.lb, 1.45) *
+          rightKill;
+
+        const tid = Math.floor(tx/55) + Math.floor(tz/55)*1703;
+        const tseed = hash(tid*41.7);
+        if (tseed < treeProb * 2.0) {
+          const nTrees = 1 + Math.floor(hash(tid*7.2)*3);
+          for (let k=0;k<nTrees;k++){
+            const jx = (hash(tid*13.1 + k*3.9) - 0.5) * 30;
+            const jz = (hash(tid*22.2 + k*6.1) - 0.5) * 24;
+            const px = tx + jx;
+            const pz = tz + jz;
+            const tp = getTerrainData(px, pz);
+
+            treePos.push(px, tp.h + 12.0, pz);
+            treeSize.push((10.0 + 26.0*treeDepth) * (0.90 + 0.25*hash(tid*5.3 + k*2.7)));
+            const ta = (0.70 + 0.30*treeDepth) * rightKill * (0.85 + 0.60*heightGrad);
+            treeAlpha.push(clamp(ta, 0.26, 0.99));
+          }
+        }
+      }
+
+      if(performance.now()-lastYield>28){
+        const pct = Math.floor((step/totalSteps)*100);
+        fillBar.style.width = pct+'%';
+        loadText.innerText = pct+'%';
+        await new Promise(r=>setTimeout(r,0));
+        lastYield = performance.now();
+      }
+    }
+
+    // Build meshes
+    const structureGeo = new THREE.BufferGeometry();
+    structureGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions,3));
+    structureGeo.setAttribute('aSize', new THREE.Float32BufferAttribute(sizes,1));
+    structureGeo.setAttribute('aAlpha', new THREE.Float32BufferAttribute(alphas,1));
+    const structureMat = new THREE.ShaderMaterial({
+      vertexShader: vertCommon,
+      fragmentShader: fragStructure,
+      uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color(0x050505) } },
+      transparent: true,
+      blending: THREE.MultiplyBlending,
+      depthWrite: false
+    });
+    const structurePoints = new THREE.Points(structureGeo, structureMat);
+    structurePoints.renderOrder = 10;
+    scene.add(structurePoints);
+
+    const mossGeo = new THREE.BufferGeometry();
+    mossGeo.setAttribute('position', new THREE.Float32BufferAttribute(mossPos,3));
+    mossGeo.setAttribute('aSize', new THREE.Float32BufferAttribute(mossSize,1));
+    mossGeo.setAttribute('aAlpha', new THREE.Float32BufferAttribute(mossAlpha,1));
+    const mossMat = new THREE.ShaderMaterial({
+      vertexShader: vertCommon,
+      fragmentShader: fragMoss,
+      uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color(0x040404) } },
+      transparent: true,
+      blending: THREE.MultiplyBlending,
+      depthWrite: false
+    });
+    const mossPoints = new THREE.Points(mossGeo, mossMat);
+    mossPoints.renderOrder = 20;
+    scene.add(mossPoints);
+
+    const treeTex = makeTreeTexture();
+    const treeGeo = new THREE.BufferGeometry();
+    treeGeo.setAttribute('position', new THREE.Float32BufferAttribute(treePos,3));
+    treeGeo.setAttribute('aSize', new THREE.Float32BufferAttribute(treeSize,1));
+    treeGeo.setAttribute('aAlpha', new THREE.Float32BufferAttribute(treeAlpha,1));
+    const treeMat = new THREE.ShaderMaterial({
+      vertexShader: vertTree,
+      fragmentShader: fragTree,
+      uniforms: { uMap: { value: treeTex }, uColor: { value: new THREE.Color(0x050505) } },
+      transparent: true,
+      blending: THREE.NormalBlending,
+      depthWrite: false
+    });
+    const treePoints = new THREE.Points(treeGeo, treeMat);
+    treePoints.renderOrder = 30;
+    scene.add(treePoints);
+
+    // Birds
+    initBirds();
+
+    // Interaction: use terrain raycast (FIX)
+    function updateMouseNDC(e){
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouseNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouseNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    }
+
+    function tryBurst(e, intensity){
+      updateMouseNDC(e);
+      raycaster.setFromCamera(mouseNDC, camera);
+
+      // 射线与地形求交（而不是 y=0 平面）
+      const ok = intersectTerrain(raycaster.ray, hitPoint);
+      if (!ok) return;
+
+      spawnBirdBurst(hitPoint.x, hitPoint.z, intensity);
+    }
+
+    // 绑定到 canvas 更准确
+    renderer.domElement.addEventListener('pointermove', (e)=> tryBurst(e, 0.85), { passive: true });
+    renderer.domElement.addEventListener('pointerdown', (e)=> tryBurst(e, 1.35), { passive: true });
+
+    // UI
+    document.getElementById('loading-tip').style.display='none';
+    container.style.opacity='1';
+
+    window.addEventListener('resize', ()=>{
+      camera.aspect = window.innerWidth/window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      fogMeshScreen.material.uniforms.uRes.value.set(window.innerWidth, window.innerHeight);
+    });
+
+    // Animate
+    function animate(){
+      requestAnimationFrame(animate);
+
+      const now = performance.now();
+      const dt = Math.min(0.033, (now - lastTime)/1000);
+      lastTime = now;
+
+      const tt = now * 0.001;
+      structureMat.uniforms.uTime.value = tt;
+      mossMat.uniforms.uTime.value = tt;
+
+      fogMeshScreen.material.uniforms.uTime.value = tt;
+      mistMat1.uniforms.uTime.value = tt;
+      mistMat2.uniforms.uTime.value = tt;
+
+      updateBirds(dt);
+
+      renderer.render(scene, camera);
+    }
+    animate();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

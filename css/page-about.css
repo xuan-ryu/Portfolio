@@ -1,0 +1,169 @@
+/* ================================================================
+   ABOUT
+   ================================================================ */
+
+.about-header {
+  padding: 72px 0 56px;
+  border-bottom: 1px solid var(--line);
+}
+.about-header h1 {
+  font-family: var(--serif);
+  font-size: clamp(52px, 9vw, 110px);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.0;
+}
+
+/* ── About Me layout ────────────────────────────────────── */
+.about-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: start;
+  padding-top: 64px;
+  padding-bottom: 64px;
+  border-bottom: 1px solid var(--line);
+}
+.about-text {}
+.about-text p {
+  font-size: 16px;
+  line-height: 1.85;
+  color: var(--fg);
+  margin-bottom: 22px;
+}
+.about-quote {
+  font-family: var(--serif);
+  font-size: 19px;
+  line-height: 1.65;
+  border-left: 2px solid var(--fg);
+  padding-left: 24px;
+  margin: 32px 0;
+  color: var(--fg);
+}
+.about-quote .zh { display: block; margin-bottom: 8px; }
+.about-quote .en { font-size: 14px; color: var(--muted); }
+
+.about-photo {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  background: var(--hover);
+  border-radius: var(--r);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.about-photo img { width: 100%; height: 100%; object-fit: cover; }
+.about-photo .placeholder-label {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  color: var(--dim);
+}
+
+@media (max-width: 680px) {
+  .about-layout { grid-template-columns: 1fr; gap: 40px; }
+  .about-photo { aspect-ratio: 4 / 3; order: -1; }
+}
+
+/* ── Value archetypes ─────────────────────────────────────── */
+.archetypes-section {}
+.archetypes-grid { grid-template-columns: repeat(3, 1fr); }
+.archetype-cell {
+  padding: 36px 28px;
+  transition: background 0.2s;
+}
+.archetype-cell:hover { background: var(--hover); }
+.archetype-icon {
+  font-family: var(--serif);
+  font-size: 30px;
+  margin-bottom: 18px;
+}
+.archetype-cell h3 {
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 400;
+  margin-bottom: 10px;
+}
+.archetype-cell p {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+@media (max-width: 680px) {
+  .archetypes-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Skills ──────────────────────────────────────────────── */
+.skills-section {}
+.skills-section h2 {
+  font-family: var(--serif);
+  font-size: 32px;
+  font-weight: 400;
+  margin-bottom: 32px;
+}
+.skills-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.skill-group {
+  background: var(--bg);
+  padding: 24px 22px;
+}
+.skill-group-title {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+.skill-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ── Activities & Leadership ─────────────────────────────── */
+.leadership-section {}
+.leadership-section h2 {
+  font-family: var(--serif);
+  font-size: 32px;
+  font-weight: 400;
+  margin-bottom: 32px;
+}
+.timeline {}
+.timeline-item {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 24px;
+  padding: 28px 0;
+  border-bottom: 1px solid var(--line);
+}
+.timeline-item:first-child { border-top: 1px solid var(--line); }
+.timeline-date {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  padding-top: 3px;
+}
+.timeline-title {
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 3px;
+}
+.timeline-org {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.timeline-desc {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+@media (max-width: 560px) {
+  .timeline-item { grid-template-columns: 1fr; gap: 6px; }
+}

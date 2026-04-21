@@ -1,0 +1,199 @@
+/* ================================================================
+   HOME — featured · value · quotes · cta
+   (Hero styles remain inline in index.html — Three.js context)
+   ================================================================ */
+
+/* ── Section intro ─────────────────────────────────────── */
+.section-intro {
+  margin-bottom: 48px;
+}
+.section-intro .label {
+  margin-bottom: 14px;
+}
+.section-intro h2 {
+  font-family: var(--serif);
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+}
+.section-intro-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+/* ── Featured projects ─────────────────────────────────── */
+.featured-section { background: var(--bg); }
+
+.featured-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.featured-grid .project-card:first-child {
+  grid-column: span 2;
+}
+.featured-grid .project-card:first-child .project-cover {
+  aspect-ratio: 21 / 9;
+}
+
+@media (max-width: 680px) {
+  .featured-grid { grid-template-columns: 1fr; }
+  .featured-grid .project-card:first-child { grid-column: span 1; }
+  .featured-grid .project-card:first-child .project-cover { aspect-ratio: 16 / 9; }
+}
+
+/* ── Project card (shared between home + work list) ─────── */
+.project-card {
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  overflow: hidden;
+  background: var(--card);
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.22s, transform 0.28s var(--ease);
+}
+.project-card:hover {
+  border-color: #c8c8c8;
+  transform: translateY(-4px);
+}
+.project-cover {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--hover);
+  overflow: hidden;
+  position: relative;
+}
+.project-cover img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  transition: transform 0.55s var(--ease);
+}
+.project-card:hover .project-cover img { transform: scale(1.05); }
+
+/* Colour-coded placeholder covers */
+.cover-froghire    { background: linear-gradient(135deg, #e8f0fe 0%, #c9d8fa 100%); }
+.cover-roper       { background: linear-gradient(135deg, #f0ede8 0%, #ddd6cc 100%); }
+.cover-hunger      { background: linear-gradient(135deg, #f5e8e8 0%, #e8cccc 100%); }
+.cover-vr-monarch  { background: linear-gradient(135deg, #e8f5ec 0%, #c4e0cb 100%); }
+.cover-digital-soc { background: linear-gradient(135deg, #f0e8f5 0%, #d8c4e0 100%); }
+
+.cover-label {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  font-family: var(--serif);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: rgba(0,0,0,0.35);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.project-body {
+  padding: 20px 20px 24px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.project-tags   { display: flex; flex-wrap: wrap; gap: 6px; }
+.project-title  {
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.3;
+}
+.project-oneliner {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.65;
+  flex: 1;
+}
+
+/* ── My Value section ──────────────────────────────────── */
+.value-section { background: var(--bg); }
+
+.value-grid {
+  grid-template-columns: repeat(3, 1fr);
+}
+.value-cell {
+  padding: 40px 32px;
+  transition: background 0.2s;
+}
+.value-cell:hover { background: var(--hover); }
+
+.value-icon {
+  font-family: var(--serif);
+  font-size: 32px;
+  margin-bottom: 22px;
+  line-height: 1;
+}
+.value-cell h3 {
+  font-family: var(--serif);
+  font-size: 19px;
+  font-weight: 400;
+  margin-bottom: 12px;
+}
+.value-cell p {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+@media (max-width: 720px) {
+  .value-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Testimonials ──────────────────────────────────────── */
+.quotes-section { background: var(--bg); }
+
+.quotes-grid {
+  grid-template-columns: repeat(3, 1fr);
+}
+.quote-cell {
+  padding: 36px 28px;
+}
+.quote-text {
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.8;
+  color: var(--fg);
+  margin-bottom: 24px;
+  position: relative;
+}
+.quote-text::before { content: '\201C'; }
+.quote-text::after  { content: '\201D'; }
+.quote-author strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg);
+  margin-bottom: 2px;
+}
+.quote-author span {
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 720px) {
+  .quotes-grid { grid-template-columns: 1fr; }
+}
+
+/* ── CTA banner ────────────────────────────────────────── */
+.cta-section {
+  text-align: center;
+  padding: 110px 0;
+}
+.cta-section h2 {
+  font-family: var(--serif);
+  font-size: clamp(36px, 7vw, 88px);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  margin-bottom: 40px;
+}

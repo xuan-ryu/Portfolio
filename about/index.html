@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="About XUYUAN LIU — Product Designer & Creative Development." />
+  <title>About — XUYUAN</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="../css/global.css" />
+  <link rel="stylesheet" href="../css/page-about.css" />
+
+  <style>
+    /* ── About Hero (water-ink particle backdrop) ───────── */
+    .about-hero {
+      position: relative;
+      width: 100%;
+      height: 88vh;
+      min-height: 620px;
+      overflow: hidden;
+      background: #ffffff;
+      isolation: isolate;
+    }
+    .about-hero-canvas {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      opacity: 0;
+      transition: opacity 1.4s ease-in;
+      pointer-events: none;
+    }
+    .about-hero-canvas canvas { display: block; }
+
+    .about-hero-loading {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 5;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 14px;
+      user-select: none;
+      transition: opacity 0.6s ease-out;
+      pointer-events: none;
+    }
+    .about-hero-loading .tip-zh {
+      font-family: 'Cormorant Garamond','ZCOOL XiaoWei','Noto Serif SC','Songti SC',Georgia,serif;
+      font-size: 13px;
+      letter-spacing: 0.5em;
+      color: #333;
+    }
+    .about-hero-loading .tip-bar {
+      width: 160px; height: 1px;
+      background: #eee;
+      overflow: hidden;
+      position: relative;
+    }
+    .about-hero-loading .tip-fill {
+      position: absolute; left: 0; top: 0;
+      width: 0%; height: 100%;
+      background: #111;
+    }
+    .about-hero.loaded .about-hero-loading { opacity: 0; }
+    .about-hero.loaded .about-hero-canvas  { opacity: 1; }
+
+    .about-hero-ui {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      height: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: clamp(56px, 9vh, 96px) clamp(24px, 6vw, 72px);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      pointer-events: none;
+    }
+
+    .hero-eyebrow-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .hero-eyebrow {
+      font-family: 'Murecho','Inter',sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #888;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .hero-eyebrow::before {
+      content: '';
+      width: 28px; height: 1px; background: #888; opacity: 0.5;
+    }
+    .hero-eyebrow .zh {
+      font-family: 'Cormorant Garamond','ZCOOL XiaoWei','Noto Serif SC','Songti SC',Georgia,serif;
+      font-size: 13px;
+      letter-spacing: 0.3em;
+      color: #444;
+      text-transform: none;
+    }
+    .brand-corner-ab {
+      text-align: right;
+      font-family: 'Murecho','Inter',sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #999;
+      line-height: 1.7;
+    }
+    .brand-corner-ab strong {
+      display: block;
+      font-family: 'Cormorant Garamond','ZCOOL XiaoWei','Noto Serif SC','Songti SC',Georgia,serif;
+      font-size: 20px;
+      letter-spacing: 0.35em;
+      color: #222;
+      font-weight: 500;
+      text-transform: none;
+      margin-bottom: 6px;
+    }
+
+    .hero-content {
+      align-self: center;
+      max-width: 760px;
+      pointer-events: none;
+    }
+    .hero-title {
+      font-family: 'Cormorant Garamond','ZCOOL XiaoWei','Noto Serif SC','Songti SC',Georgia,serif;
+      font-weight: 400;
+      font-size: clamp(46px, 6.4vw, 94px);
+      line-height: 1.02;
+      letter-spacing: -0.005em;
+      color: #111;
+      margin: 0 0 28px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .hero-title .line {
+      display: block;
+      opacity: 0;
+      transform: translate3d(0, 14px, 0);
+      filter: blur(3px);
+      animation: heroLineIn 1.15s cubic-bezier(.2,.9,.2,1) forwards;
+    }
+    .hero-title .line:nth-child(1) { animation-delay: 0.25s; }
+    .hero-title .line:nth-child(2) {
+      animation-delay: 0.6s;
+      font-style: italic;
+      color: #2a2a2a;
+    }
+    @keyframes heroLineIn {
+      0%   { opacity: 0; transform: translate3d(0,14px,0); filter: blur(3px); }
+      70%  { opacity: 0.95; filter: blur(0); }
+      100% { opacity: 1; transform: translate3d(0,0,0); filter: blur(0); }
+    }
+    .hero-sub {
+      font-family: 'Murecho','Inter',sans-serif;
+      font-size: 13.5px;
+      line-height: 1.85;
+      letter-spacing: 0.02em;
+      color: #666;
+      max-width: 500px;
+      margin-bottom: 40px;
+      font-weight: 300;
+      opacity: 0;
+      animation: heroLineIn 1.2s cubic-bezier(.2,.9,.2,1) 1s forwards;
+    }
+    .hero-name {
+      display: inline-flex;
+      align-items: center;
+      gap: 16px;
+      opacity: 0;
+      animation: heroLineIn 1.2s cubic-bezier(.2,.9,.2,1) 1.2s forwards;
+    }
+    .hero-name .zh {
+      font-family: 'Cormorant Garamond','ZCOOL XiaoWei','Noto Serif SC','Songti SC',Georgia,serif;
+      font-size: 22px;
+      letter-spacing: 0.2em;
+      color: #111;
+      font-weight: 500;
+    }
+    .hero-name .divider {
+      width: 32px;
+      height: 1px;
+      background: #888;
+    }
+    .hero-name .en {
+      font-family: 'Murecho','Inter',sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: #666;
+    }
+
+    .hero-side-text {
+      position: absolute;
+      top: 50%; right: clamp(16px, 3vw, 42px);
+      transform: translateY(-50%);
+      writing-mode: vertical-rl;
+      font-family: 'Cormorant Garamond','ZCOOL XiaoWei','Noto Serif SC','Songti SC',Georgia,serif;
+      font-size: 14px;
+      letter-spacing: 1.2em;
+      color: #333;
+      opacity: 0;
+      animation: heroLineIn 1.3s cubic-bezier(.2,.9,.2,1) 1.4s forwards;
+      pointer-events: none;
+      z-index: 11;
+    }
+
+    .hero-footer-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 24px;
+    }
+    .hero-hint {
+      font-family: 'Murecho','Inter',sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.22em;
+      color: #888;
+      display: flex; align-items: center; gap: 12px;
+      text-transform: uppercase;
+      opacity: 0;
+      animation: heroLineIn 1.2s cubic-bezier(.2,.9,.2,1) 1.6s forwards;
+    }
+    .hero-hint::after {
+      content: '';
+      width: 40px; height: 1px;
+      background: #888;
+      opacity: 0.5;
+    }
+    .hero-meta {
+      font-family: 'Murecho','Inter',sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: #999;
+      text-transform: uppercase;
+      text-align: right;
+      line-height: 1.8;
+      opacity: 0;
+      animation: heroLineIn 1.2s cubic-bezier(.2,.9,.2,1) 1.7s forwards;
+    }
+
+    @media (max-width: 780px) {
+      .about-hero { height: auto; min-height: 92vh; padding: 0; }
+      .hero-side-text { display: none; }
+      .brand-corner-ab { display: none; }
+      .hero-meta { display: none; }
+      .hero-title { font-size: clamp(40px, 11vw, 64px); }
+      .about-hero-ui { padding: 72px 24px 40px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .hero-title .line,
+      .hero-sub,
+      .hero-name,
+      .hero-side-text,
+      .hero-hint,
+      .hero-meta { animation: none; opacity: 1; transform: none; filter: none; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="content-nav" role="navigation" aria-label="Primary navigation">
+  <div class="content-nav-inner">
+    <a href="../index.html" class="nav-logo">XUYUAN</a>
+    <div class="nav-links">
+      <a href="../work/">work</a>
+      <a href="./index.html">about</a>
+      <a href="../contact/">contact</a>
+    </div>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+<div class="nav-drawer" aria-hidden="true">
+  <a href="../work/">work</a>
+  <a href="./index.html">about</a>
+  <a href="../contact/">contact</a>
+</div>
+
+<main>
+
+  <!-- ══════════════════════════════════════════════════════
+       ABOUT HERO (water-ink particle backdrop, static)
+  ════════════════════════════════════════════════════════ -->
+  <section class="about-hero" id="about-hero">
+    <div class="about-hero-canvas" id="about-canvas"></div>
+    <div class="about-hero-loading">
+      <div class="tip-zh">知 行 合 一</div>
+      <div class="tip-bar"><div class="tip-fill" id="about-tip-fill"></div></div>
+    </div>
+
+    <div class="about-hero-ui">
+
+      <!-- Top row: eyebrow + brand corner -->
+      <div class="hero-eyebrow-row">
+        <p class="hero-eyebrow">About <span class="zh">关于</span></p>
+        <div class="brand-corner-ab">
+          <strong>徐 源</strong>
+          Xuyuan Liu · 刘栩源
+        </div>
+      </div>
+
+      <!-- Center: title + subtitle + name -->
+      <div class="hero-content">
+        <h1 class="hero-title" aria-label="Product Designer and Creative Development">
+          <span class="line">Product Designer.</span>
+          <span class="line">&amp; Creative Development.</span>
+        </h1>
+        <p class="hero-sub">
+          Building at the intersection of humanities and creative engineering.<br/>
+          Crafting digital experiences with an oriental aesthetic and modern precision.
+        </p>
+        <div class="hero-name">
+          <span class="zh">徐 源</span>
+          <span class="divider"></span>
+          <span class="en">Xuyuan Liu · Cornell Information Science</span>
+        </div>
+      </div>
+
+      <!-- Vertical Chinese idiom on the right -->
+      <div class="hero-side-text">观 象 取 意</div>
+
+      <!-- Bottom row: scroll hint + meta -->
+      <div class="hero-footer-row">
+        <div class="hero-hint">向下滚动 / Scroll to read</div>
+        <div class="hero-meta">
+          Ithaca, NY<br/>
+          2024 — Present
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- About Me + Photo -->
+  <section id="about-me">
+    <div class="container about-layout">
+      <div class="about-text" data-fade>
+        <p>Hi, I'm XUYUAN (徐源) — a UX designer and researcher with a focus on human-computer interaction, interactive media, and cultural storytelling.</p>
+        <p>My work spans digital interfaces, immersive experiences, and social impact design. Whether I'm redesigning a hiring platform powered by AI, building a VR experience about monarch butterflies, or reimagining how researchers access decades of public opinion data — I ask the same question: <em>what does this feel like to the person using it?</em></p>
+        <p>I approach every project with the curiosity of a researcher and the care of a craftsperson. I believe design is never neutral — every interface embeds assumptions about who has agency, who the system is for, and what matters.</p>
+        <blockquote class="about-quote">
+          <span class="zh">好雪片々，不落别處。</span>
+          <span class="en">Good snow, flake by flake, falls only here.<br><em>— Zen kōan on full presence</em></span>
+        </blockquote>
+        <p>Currently a graduate student at Cornell University, Information Science. Previously: design research intern at [Studio], research assistant in the Cornell HCI lab.</p>
+      </div>
+      <div class="about-photo" data-fade>
+        <span class="placeholder-label">Portrait photo</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Value Archetypes -->
+  <section id="value-archetypes" class="section archetypes-section">
+    <div class="container">
+      <div class="section-intro" data-fade style="margin-bottom:40px;">
+        <p class="label">My Value</p>
+        <h2 style="font-family:var(--serif);font-size:32px;font-weight:400;margin-top:12px;">How I work</h2>
+      </div>
+      <div class="grid-divider archetypes-grid">
+        <div class="archetype-cell" data-fade>
+          <div class="archetype-icon">🔥</div>
+          <h3>Firefighter</h3>
+          <p>I move fast when it matters. When projects hit turbulence, I find clarity under pressure — turning constraint into creative momentum. I step toward the hard problems, not away from them.</p>
+        </div>
+        <div class="archetype-cell" data-fade>
+          <div class="archetype-icon">🦉</div>
+          <h3>Owl</h3>
+          <p>I observe before I act. Deep research and careful synthesis are my foundation. I question surface assumptions, surface what's hidden in the data, and ask the question nobody thought to ask.</p>
+        </div>
+        <div class="archetype-cell" data-fade>
+          <div class="archetype-icon">🌳</div>
+          <h3>Tree</h3>
+          <p>I build for the long run. Strong roots in research and relationships. Adaptable above ground — growing in whichever direction the work genuinely needs, not just what's comfortable.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Skills -->
+  <section id="skills" class="section skills-section">
+    <div class="container">
+      <h2 data-fade>My Skills</h2>
+      <div class="skills-grid">
+        <div class="skill-group" data-fade>
+          <div class="skill-group-title">Design</div>
+          <div class="skill-tags">
+            <span class="pill">Figma</span>
+            <span class="pill">Framer</span>
+            <span class="pill">Adobe XD</span>
+            <span class="pill">Sketch</span>
+            <span class="pill">Procreate</span>
+          </div>
+        </div>
+        <div class="skill-group" data-fade>
+          <div class="skill-group-title">Research</div>
+          <div class="skill-tags">
+            <span class="pill">User Interviews</span>
+            <span class="pill">Usability Testing</span>
+            <span class="pill">Survey Design</span>
+            <span class="pill">Card Sorting</span>
+            <span class="pill">Affinity Mapping</span>
+          </div>
+        </div>
+        <div class="skill-group" data-fade>
+          <div class="skill-group-title">Prototyping</div>
+          <div class="skill-tags">
+            <span class="pill">HTML / CSS</span>
+            <span class="pill">React</span>
+            <span class="pill">Unity (VR)</span>
+            <span class="pill">Three.js</span>
+            <span class="pill">After Effects</span>
+          </div>
+        </div>
+        <div class="skill-group" data-fade>
+          <div class="skill-group-title">Languages</div>
+          <div class="skill-tags">
+            <span class="pill">中文 · Native</span>
+            <span class="pill">English · Professional</span>
+            <span class="pill">日本語 · Conversational</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Activities & Leadership -->
+  <section id="leadership" class="section leadership-section">
+    <div class="container">
+    <h2 data-fade>Activities &amp; Leadership</h2>
+    <div class="timeline">
+
+      <div class="timeline-item" data-fade>
+        <div class="timeline-date">2023 – Present</div>
+        <div class="timeline-body">
+          <div class="timeline-title">President</div>
+          <div class="timeline-org">Chinese Students Association (CSA), Cornell University</div>
+          <p class="timeline-desc">Lead a community of 400+ members. Organized 12 cultural events annually including the Lunar New Year Gala (600+ attendees). Managed a $28,000 annual budget and led a team of 8 executive officers.</p>
+        </div>
+      </div>
+
+      <div class="timeline-item" data-fade>
+        <div class="timeline-date">2022 – Present</div>
+        <div class="timeline-body">
+          <div class="timeline-title">Graduate Research Assistant</div>
+          <div class="timeline-org">HCI Research Lab, Cornell University</div>
+          <p class="timeline-desc">Contributing to projects in VR educational experience design, AI-mediated communication, and computational methods for design research. Three papers in progress.</p>
+        </div>
+      </div>
+
+      <div class="timeline-item" data-fade>
+        <div class="timeline-date">2023</div>
+        <div class="timeline-body">
+          <div class="timeline-title">Co-Organizer</div>
+          <div class="timeline-org">Cornell Design Week</div>
+          <p class="timeline-desc">Coordinated 3-day interdisciplinary design festival featuring workshops, talks, and student exhibitions. Managed 18 speakers and 200+ participant registrations.</p>
+        </div>
+      </div>
+
+      <div class="timeline-item" data-fade>
+        <div class="timeline-date">2022 – 2023</div>
+        <div class="timeline-body">
+          <div class="timeline-title">Volunteer Facilitator</div>
+          <div class="timeline-org">Blind Design Review, Cornell IS</div>
+          <p class="timeline-desc">Organized and facilitated bi-weekly anonymous design critique sessions for graduate students. Developed a structured feedback framework now used across three studio courses.</p>
+        </div>
+      </div>
+
+    </div><!-- /.timeline -->
+    </div><!-- /.container -->
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-left">
+      <div class="footer-logo">XUYUAN</div>
+      <p class="footer-copy">© 2024 XUYUAN. All rights reserved.</p>
+    </div>
+    <nav class="footer-nav" aria-label="Footer navigation">
+      <a href="../work/">work</a>
+      <a href="./index.html">about</a>
+      <a href="../index.html#value">my value</a>
+      <a href="../contact/">contact</a>
+    </nav>
+    <div class="footer-social">
+      <a href="https://www.linkedin.com/" rel="noopener" target="_blank">linkedin</a>
+      <a href="https://www.instagram.com/" rel="noopener" target="_blank">instagram</a>
+    </div>
+  </div>
+</footer>
+
+<!-- ══════════════════════════════════════════════════════
+     ABOUT HERO — Three.js particle scene (static, no scroll)
+════════════════════════════════════════════════════════ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+  'use strict';
+  const hero       = document.getElementById('about-hero');
+  const container  = document.getElementById('about-canvas');
+  const fillEl     = document.getElementById('about-tip-fill');
+  if (!hero || !container) return;
+
+  const isMobile = window.innerWidth <= 768;
+  const isLowEnd = isMobile && (
+    (navigator.deviceMemory && navigator.deviceMemory <= 2) ||
+    (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2)
+  );
+
+  // ── Low-end / no-WebGL fallback: SVG ink silhouette
+  if (isLowEnd || !window.WebGLRenderingContext) {
+    hero.classList.add('loaded');
+    container.innerHTML =
+      '<svg viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice" ' +
+      'style="width:100%;height:100%;position:absolute;inset:0;opacity:0.55">' +
+      '<defs><filter id="ab"><feGaussianBlur stdDeviation="2.5"/></filter></defs>' +
+      '<path d="M0,420 Q60,350 130,380 Q200,320 280,340 Q340,260 420,290 Q500,180 560,220 Q610,140 680,170 Q740,100 800,130 Q860,80 920,110 Q980,50 1040,80 Q1100,60 1200,90 L1200,600 L0,600 Z" fill="#2a2a2a" opacity="0.12" filter="url(#ab)"/>' +
+      '<path d="M0,480 Q80,430 160,450 Q260,390 360,420 Q440,360 520,380 Q600,320 680,350 Q760,300 840,330 Q920,270 1000,300 Q1100,260 1200,280 L1200,600 L0,600 Z" fill="#1a1a1a" opacity="0.18" filter="url(#ab)"/>' +
+      '<path d="M0,540 Q100,510 200,520 Q300,490 400,505 Q500,480 600,490 Q700,470 800,485 Q900,460 1000,475 Q1100,455 1200,465 L1200,600 L0,600 Z" fill="#111" opacity="0.25"/>' +
+      '</svg>';
+    return;
+  }
+
+  // ── Math helpers
+  const mix = (a, b, t) => a * (1 - t) + b * t;
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+  const smoothstep = (e0, e1, x) => {
+    const t = clamp((x - e0) / (e1 - e0), 0, 1);
+    return t * t * (3 - 2 * t);
+  };
+  const hash = n => { const s = Math.sin(n) * 43758.5453; return s - Math.floor(s); };
+  const noise2D = (x, z) => {
+    const ix = Math.floor(x), iz = Math.floor(z);
+    const fx = x - ix, fz = z - iz;
+    const ux = fx * fx * (3 - 2 * fx);
+    return mix(
+      mix(hash(ix + iz * 57), hash(ix + 1 + iz * 57), ux),
+      mix(hash(ix + (iz + 1) * 57), hash(ix + 1 + (iz + 1) * 57), ux),
+      fz
+    );
+  };
+  const fbm = (x, z, oct = 4) => {
+    let v = 0, a = 0.5;
+    for (let i = 0; i < oct; i++) { v += a * noise2D(x, z); x = x * 2.05 + 100; z = z * 2.25 + 100; a *= 0.5; }
+    return v;
+  };
+  const ridge1D = (x) => {
+    let n = fbm(x * 0.0014, 10, 5);
+    let r = 1 - Math.abs(n - 0.5) * 2;
+    r = Math.pow(Math.max(0, r), 2.2);
+    return r * smoothstep(0.2, 0.8, fbm(x * 0.0042, 200, 3));
+  };
+  const bandMask = (z, c, w) => {
+    const d = Math.abs(z - c) / w;
+    return Math.pow(Math.max(0, 1 - d), 2);
+  };
+
+  // ── Two-layer ridges (near + distant), centered low in frame
+  const getTerrainData = (x, z) => {
+    const near = bandMask(z, 180, 480);
+    const far  = bandMask(z, -620, 760);
+    const sNear = ridge1D(x + 60) * 220;
+    const sFar  = ridge1D(x - 380) * 380;
+    const texN = fbm(x * 0.003, z * 0.004, 4);
+    const texR = Math.pow(Math.max(0, 1 - Math.abs(texN - 0.5) * 2), 2.6);
+    let h = near * (sNear + texR * 120) + far * (sFar + texR * 110);
+    h -= z * 0.22;
+    h -= 440;  // offset downward so mountains sit low in frame
+    return { h, ridge: texR, near, far };
+  };
+
+  // ── Shaders (lifted/trimmed from home hero, static — no uScroll dispersal)
+  const mountainVert = `
+    uniform float uTime;
+    attribute float aSize;
+    attribute float aAlpha;
+    varying float vAlpha;
+    void main() {
+      vec3 pos = position;
+      float phase = fract(sin(dot(pos.xz, vec2(12.9898, 78.233))) * 43758.5453) * 6.2831;
+      float twinkle = 0.7 + 0.6 * sin(uTime * 1.4 + phase);
+      pos.y += sin(uTime * 0.28 + pos.x * 0.008) * 0.5;
+      vec4 mv = viewMatrix * modelMatrix * vec4(pos, 1.0);
+      gl_Position = projectionMatrix * mv;
+      float size = aSize * (1000.0 / -mv.z);
+      gl_PointSize = clamp(size * (0.85 + 0.15 * twinkle), 1.0, 140.0);
+      vAlpha = aAlpha * twinkle;
+    }
+  `;
+  const mountainFrag = `
+    uniform vec3 uColor;
+    varying float vAlpha;
+    void main() {
+      float d = distance(gl_PointCoord, vec2(0.5));
+      float shape = smoothstep(0.5, 0.12, d);
+      float a = vAlpha * shape;
+      if (a < 0.01) discard;
+      gl_FragColor = vec4(uColor, a);
+    }
+  `;
+  const birdVert = `
+    uniform float uTime;
+    attribute float aSize;
+    varying float vDepth;
+    void main() {
+      vec3 pos = position;
+      pos.y += sin(uTime * 3.0 + pos.x * 0.05) * 8.0;
+      vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+      vDepth = smoothstep(-2500.0, -500.0, mv.z);
+      gl_Position = projectionMatrix * mv;
+      gl_PointSize = aSize * (1000.0 / -mv.z);
+    }
+  `;
+  const birdFrag = `
+    uniform vec3 uColor;
+    varying float vDepth;
+    void main() {
+      vec2 uv = gl_PointCoord - vec2(0.5);
+      float v = abs(uv.x * 1.5) + uv.y * 0.8;
+      float shape = smoothstep(0.4, 0.05, abs(v - 0.1));
+      if (shape < 0.01) discard;
+      gl_FragColor = vec4(uColor, shape * mix(0.25, 0.9, vDepth));
+    }
+  `;
+
+  // ── Scene setup
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0xFFFFFF, 0.00009);
+
+  let w = hero.offsetWidth, h = hero.offsetHeight;
+  const camera = new THREE.PerspectiveCamera(48, w / h, 1, 7000);
+  camera.position.set(0, 220, 2500);
+  camera.lookAt(0, -80, 0);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(Math.min(isMobile ? 0.75 : 1.5, window.devicePixelRatio || 1));
+  renderer.setSize(w, h);
+  renderer.setClearColor(0xFFFFFF, 0);
+  container.appendChild(renderer.domElement);
+
+  // ── Build particles (async, yields for loading bar)
+  async function build() {
+    const positions = [], sizes = [], alphas = [];
+    const extX = 2600, minZ = -900, maxZ = 700;
+    const cell    = isMobile ? 26 : 14;
+    const density = isMobile ? 10 : 45;
+    const totalSteps = Math.floor((extX * 2) / cell);
+    let lastYield = performance.now();
+
+    for (let cx = -extX, step = 0; cx <= extX; cx += cell, step++) {
+      for (let cz = minZ; cz <= maxZ; cz += cell) {
+        const tx = cx + cell / 2, tz = cz + cell / 2;
+        const t = getTerrainData(tx, tz);
+        if (t.h < -360) continue;
+        const depth = smoothstep(minZ, maxZ, cz);
+        let prob = Math.pow(t.ridge, 3.0) * 1.8 + 0.15;
+        prob *= mix(0.3, 1.25, depth);
+        const count = Math.min(Math.floor(prob * density), isMobile ? 5 : 20);
+        for (let p = 0; p < count; p++) {
+          const px = cx + Math.random() * cell;
+          const pz = cz + Math.random() * cell;
+          positions.push(px, getTerrainData(px, pz).h, pz);
+          sizes.push(mix(1.3, 3.8, depth) + Math.pow(t.ridge, 2) * 2);
+          alphas.push(clamp(mix(0.08, 0.55, depth) * Math.min(prob, 1.2), 0.05, 1));
+        }
+      }
+      if (performance.now() - lastYield > 24) {
+        const pct = Math.floor(step / totalSteps * 100);
+        if (fillEl) fillEl.style.width = pct + '%';
+        await new Promise(r => setTimeout(r, 0));
+        lastYield = performance.now();
+      }
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute('aSize',    new THREE.Float32BufferAttribute(sizes, 1));
+    geo.setAttribute('aAlpha',   new THREE.Float32BufferAttribute(alphas, 1));
+    const mat = new THREE.ShaderMaterial({
+      vertexShader: mountainVert, fragmentShader: mountainFrag,
+      uniforms: {
+        uTime:  { value: 0 },
+        uColor: { value: new THREE.Color(0x2A2A2A) }
+      },
+      transparent: true, blending: THREE.NormalBlending, depthWrite: false,
+    });
+    scene.add(new THREE.Points(geo, mat));
+
+    // ── Bird flock (desktop only)
+    let birdMesh = null; const birdData = [];
+    const BIRDS = isMobile ? 0 : 12;
+    if (BIRDS > 0) {
+      const bPos = new Float32Array(BIRDS * 3);
+      const bSize = new Float32Array(BIRDS);
+      const flockZ = -600 - Math.random() * 600;
+      const flockY = 260 + Math.random() * 140;
+      const flockSpeed = 0.9 + Math.random() * 0.3;
+      for (let b = 0; b < BIRDS; b++) {
+        bSize[b] = 12 + Math.random() * 8;
+        birdData.push({
+          baseX: -2800 + b * (55 + Math.random() * 30),
+          baseY: flockY + (Math.random() - 0.5) * 50,
+          baseZ: flockZ + (Math.random() - 0.5) * 120,
+          speed: flockSpeed,
+        });
+      }
+      const bg = new THREE.BufferGeometry();
+      bg.setAttribute('position', new THREE.BufferAttribute(bPos, 3).setUsage(THREE.DynamicDrawUsage));
+      bg.setAttribute('aSize',    new THREE.BufferAttribute(bSize, 1));
+      const bmat = new THREE.ShaderMaterial({
+        vertexShader: birdVert, fragmentShader: birdFrag,
+        uniforms: {
+          uTime:  { value: 0 },
+          uColor: { value: new THREE.Color(0x222222) }
+        },
+        transparent: true, depthWrite: false,
+      });
+      birdMesh = new THREE.Points(bg, bmat);
+      birdMesh.renderOrder = 90;
+      scene.add(birdMesh);
+    }
+
+    hero.classList.add('loaded');
+
+    // ── Animate
+    let lastT = performance.now();
+    const frameInterval = isMobile ? 1000 / 30 : 0;
+    let lastFrame = 0;
+    (function animate(ts) {
+      requestAnimationFrame(animate);
+      if (isMobile && ts - lastFrame < frameInterval) return;
+      lastFrame = ts;
+      const now = performance.now();
+      const dt  = Math.min(0.033, (now - lastT) / 1000); lastT = now;
+      const t   = now * 0.001;
+      mat.uniforms.uTime.value = t;
+      if (birdMesh) {
+        const arr = birdMesh.geometry.attributes.position.array;
+        for (let i = 0; i < BIRDS; i++) {
+          const d = birdData[i], i3 = i * 3;
+          d.baseX += d.speed * dt * 60;
+          if (d.baseX > 2600) d.baseX = -3200 - Math.random() * 1200;
+          arr[i3] = d.baseX;
+          arr[i3 + 1] = d.baseY;
+          arr[i3 + 2] = d.baseZ;
+        }
+        birdMesh.geometry.attributes.position.needsUpdate = true;
+        birdMesh.material.uniforms.uTime.value = t;
+      }
+      renderer.render(scene, camera);
+    })(0);
+  }
+  build();
+
+  // ── Resize: observe hero container, not window
+  const ro = new ResizeObserver(() => {
+    w = hero.offsetWidth; h = hero.offsetHeight;
+    if (w <= 0 || h <= 0) return;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    const mob = w <= 768;
+    renderer.setPixelRatio(Math.min(mob ? 1 : 1.5, window.devicePixelRatio || 1));
+    renderer.setSize(w, h);
+  });
+  ro.observe(hero);
+})();
+</script>
+
+<script src="../js/shared-nav.js"></script>
+</body>
+</html>

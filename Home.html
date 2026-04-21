@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DigitalLandscape Archive (HTML)</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <style>
+    /* Page base */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow-x: hidden;
+      background: #fff;
+    }
+
+    /* Root background wrapper (maps backgroundRef in React) */
+    #background {
+      width: 100%;
+      min-height: 200vh;
+      position: relative;
+      background-color: #FFFFFF;
+      transition: background-color 0.8s ease;
+    }
+
+    /* Fixed wrapper (maps wrapperRef) */
+    #wrapper {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100vh;
+      z-index: 1;
+      will-change: transform;
+      pointer-events: none;
+    }
+
+    /* Loading UI (maps loadingRef) */
+    #loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 14px;
+      color: #111;
+      letter-spacing: 0.5em;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+      user-select: none;
+      font-family: 'STSong', serif;
+      pointer-events: none;
+      opacity: 1;
+      transition: opacity 0.6s ease-out;
+      visibility: visible;
+    }
+
+    #progress-bar {
+      width: 180px;
+      height: 1px;
+      background: #EEE;
+      position: relative;
+      overflow: hidden;
+    }
+    #progress-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      width: 0%;
+      background: #111;
+      transition: width 0.1s linear;
+    }
+    #loading-text {
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      letter-spacing: 0.2em;
+    }
+
+    /* WebGL mount (maps mountRef) */
+    #mount {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      opacity: 0;
+      transition: opacity 1.5s ease-in;
+      pointer-events: none;
+    }
+
+    /* Foreground UI overlay (maps uiRef) */
+    #ui {
+      position: absolute;
+      inset: 0;
+      z-index: 6;
+      color: #111;
+      pointer-events: none;
+      transition: opacity 0.1s linear;
+      will-change: opacity;
+      opacity: 1;
+    }
+
+    /* === Inline styles converted from dangerouslySetInnerHTML === */
+    .framer-xy-hero h1 {
+      font-family: 'EB Garamond', 'STSong', serif;
+      font-size: clamp(48px, 6vw, 82px);
+      letter-spacing: 0.04em;
+      font-weight: 400;
+      margin: 0 0 20px 0;
+      line-height: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: baseline;
+    }
+    .framer-xy-hero .w {
+      display: inline-block;
+      opacity: 0;
+      transform: translate3d(0, 10px, 0);
+      filter: blur(2px);
+      animation: wordIn 1.05s cubic-bezier(.2,.9,.2,1) forwards;
+      will-change: opacity, transform, filter;
+    }
+    .framer-xy-hero .w:nth-child(1) { animation-delay: 0.10s; }
+    .framer-xy-hero .w:nth-child(2) { animation-delay: 0.55s; }
+    .framer-xy-hero .w:nth-child(3) { animation-delay: 1.00s; }
+    @keyframes wordIn {
+      0% { opacity: 0; transform: translate3d(0, 12px, 0); filter: blur(3px); }
+      65% { opacity: .95; filter: blur(0px); }
+      100% { opacity: 1; transform: translate3d(0, 0, 0); filter: blur(0px); }
+    }
+
+    .framer-xy-sub {
+      font-family: 'EB Garamond', serif;
+      font-size: 16px;
+      color: #666;
+      letter-spacing: 0.02em;
+      line-height: 1.6;
+      max-width: 440px;
+      font-weight: 400;
+    }
+
+    .framer-xy-brand .zh {
+      font-family: 'STSong', serif;
+      font-size: clamp(20px, 2.5vw, 36px);
+      font-weight: 500;
+      letter-spacing: 0.4em;
+      margin-bottom: 8px;
+    }
+    .framer-xy-brand .en {
+      font-family: 'EB Garamond', serif;
+      font-style: italic;
+      font-size: 14px;
+      letter-spacing: 0.05em;
+      color: #888;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .framer-xy-hero .w { animation: none; opacity: 1; transform: none; filter: none; }
+    }
+
+    /* Content spacer (maps the relative 200vh block) */
+    #content {
+      position: relative;
+      height: 200vh;
+      z-index: 0;
+    }
+
+    /* Black page (maps blackPageRef) */
+    #black-page {
+      position: absolute;
+      top: 100vh;
+      left: 0;
+      width: 100%;
+      min-height: 100vh;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: #F5F5F5;
+      opacity: 0;
+      pointer-events: none;
+      padding: 0 6vw;
+    }
+
+    /* Utility */
+    .line {
+      height: 1px;
+      width: 40px;
+      background: rgba(255,255,255,0.3);
+    }
+  </style>
+</head>
+
+<body>
+  <div id="background">
+    <div id="wrapper">
+      <!-- Loading UI -->
+      <div id="loading" aria-live="polite">
+        <div>Take a cup of tea.</div>
+        <div id="progress-bar"><div id="progress-fill"></div></div>
+        <div id="loading-text">0%</div>
+      </div>
+
+      <!-- WebGL mount -->
+      <div id="mount"></div>
+
+      <!-- Foreground UI -->
+      <div id="ui">
+        <!-- Left hero -->
+        <div class="framer-xy-hero" style="
+          position: absolute;
+          left: 6vw;
+          top: 50%;
+          transform: translateY(-50%);
+          max-width: 520px;
+        ">
+          <h1 aria-label="Welcome, 你好, こんにちは">
+            <span class="w">Welcome,</span>
+            <span class="w">歡迎,</span>
+            <span class="w">こんにちは</span>
+          </h1>
+          <div class="framer-xy-sub">
+            Product Designer &amp; Creative Development.<br/>
+            Crafting digital experiences with an aesthetic and modern design.
+          </div>
+        </div>
+
+        <!-- Right vertical + seal placeholder -->
+        <div style="
+          position: absolute;
+          top: 50%;
+          right: 6vw;
+          transform: translateY(-50%);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 24px;
+        ">
+          <div style="
+            writing-mode: vertical-rl;
+            letter-spacing: 1.2em;
+            font-weight: 500;
+            opacity: 0.9;
+            font-family: 'STSong', serif;
+            font-size: 16px;
+          ">
+            先行先聽 萬縷歸心
+          </div>
+
+          <!-- Framer sealComponent placeholder -->
+          <div id="seal-slot" style="pointer-events:auto; opacity:0.95;"></div>
+        </div>
+
+        <!-- Bottom-left caption + hint -->
+        <div style="
+          position: absolute;
+          left: 6vw;
+          bottom: 36px;
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+          pointer-events: none;
+        ">
+          <div style="
+            font-family: 'EB Garamond', serif;
+            font-style: italic;
+            font-size: 16px;
+            letter-spacing: 0.03em;
+            color: #777;
+            max-width: 480px;
+            line-height: 1.6;
+          ">
+            Foreground bank, distant peaks—mist breathes, birds stitch the hush, and moss remembers the ink.
+          </div>
+
+          <div style="
+            display:flex;
+            align-items:center;
+            gap:12px;
+            font-family: 'Inter', sans-serif;
+            font-size: 10px;
+            letter-spacing: 0.2em;
+            color: #888;
+            text-transform: uppercase;
+          ">
+            <div style="width:40px;height:1px;background:#888;opacity:0.5;"></div>
+            Scroll down to explore
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Spacer content -->
+    <div id="content">
+      <!-- Black page -->
+      <div id="black-page">
+        <div style="width:min(900px, 92vw); position:relative;">
+          <div style="
+            position: relative;
+            font-family: 'EB Garamond', 'STSong', serif;
+            font-size: clamp(20px, 2.5vw, 32px);
+            letter-spacing: 0.04em;
+            line-height: 1.8;
+            font-weight: 400;
+            text-shadow: 0 1px 0 rgba(0,0,0,0.5);
+            text-align: center;
+          ">
+            I step in before the ink dries, listen for what’s unsaid,<br/>
+            and follow one thread until the scene reveals itself.
+          </div>
+
+          <div style="
+            position: relative;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:16px;
+            margin-top:48px;
+            opacity:0.8;
+          ">
+            <div class="line"></div>
+            <div style="
+              font-family: 'Inter', sans-serif;
+              font-size: 10px;
+              letter-spacing: 0.32em;
+              text-transform: uppercase;
+              color: rgba(245,245,245,0.72);
+              white-space: nowrap;
+            ">GAWAIN · UX × CREATIVE DEV</div>
+            <div class="line"></div>
+          </div>
+
+          <div style="
+            position: relative;
+            margin-top:24px;
+            font-family: 'EB Garamond', serif;
+            font-style: italic;
+            font-size: 15px;
+            letter-spacing: 0.05em;
+            color: rgba(245,245,245,0.5);
+            line-height: 1.9;
+            text-align: center;
+          ">
+            Scroll on — the rest lives in the margin.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <script>
+    // ==========================================
+    // 1. Shaders: 完全保留原版逻辑（从 React 版本直接移植）
+    // ==========================================
+    const mountainVert = `
+      uniform float uTime;
+      uniform float uScroll;
+      attribute float aSize;
+      attribute float aAlpha;
+      varying float vAlpha;
+
+      void main() {
+        vec3 pos = position;
+
+        float phase = fract(sin(dot(pos.xz, vec2(12.9898, 78.233))) * 43758.5453) * 6.2831;
+        float twinkle = 0.6 + 0.8 * sin(uTime * 2.0 + phase);
+
+        pos.y += sin(uTime * 0.35 + pos.x * 0.008) * 0.5;
+
+        vec4 originalWorldPos = modelMatrix * vec4(pos, 1.0);
+        float valleyMask = smoothstep(100.0, -200.0, originalWorldPos.z);
+        float wave = sin(originalWorldPos.x * 0.002 + uTime * 0.5) * cos(originalWorldPos.z * 0.002 + uTime * 0.0) * 1000.0;
+        float seaLevel = 100.0 + wave;
+        float bottomFade = smoothstep(seaLevel - 60.0, seaLevel + 120.0, originalWorldPos.y);
+
+        float s = clamp((uScroll - 0.1) * 1.25, 0.0, 1.0);
+        float easeScroll = s * s * s;
+        float dropFactor = 1.0 + fract(sin(dot(pos.xz, vec2(12.9898, 78.233))) * 43758.5453) * 2.0;
+
+        pos.y -= easeScroll * 2500.0 * dropFactor;
+        pos.x += sin(pos.y * 0.01 + uTime) * easeScroll * 500.0;
+        pos.z += cos(pos.x * 0.01 + uTime) * easeScroll * 500.0;
+
+        vec4 worldPos = modelMatrix * vec4(pos, 1.0);
+        vec4 mvPosition = viewMatrix * worldPos;
+        gl_Position = projectionMatrix * mvPosition;
+
+        float size = aSize * (1000.0 / -mvPosition.z);
+        float inkExpansion = 1.0 + easeScroll * 10.0;
+        float currentTwinkle = mix(twinkle, 1.0, s);
+        gl_PointSize = clamp(size * (0.8 + 0.2 * currentTwinkle) * inkExpansion, 1.0, 150.0);
+
+        vAlpha = aAlpha * mix(1.0, bottomFade, valleyMask) * currentTwinkle;
+        vAlpha *= (1.0 - smoothstep(0.85, 1.0, uScroll));
+      }
+    `;
+
+    const mountainFrag = `
+      uniform vec3 uColor;
+      uniform float uScroll;
+      varying float vAlpha;
+      void main() {
+        float d = distance(gl_PointCoord, vec2(0.5));
+
+        float s = clamp((uScroll - 0.1) * 1.25, 0.0, 1.0);
+        float core = mix(0.1, 0.45, s * s);
+        float shape = smoothstep(0.5, core, d);
+        float a = vAlpha * shape;
+        if (a < 0.01) discard;
+
+        vec3 targetColor = vec3(0.95, 0.95, 0.95);
+        vec3 finalColor = mix(uColor, targetColor, smoothstep(0.2, 0.8, uScroll));
+
+        gl_FragColor = vec4(finalColor, a);
+      }
+    `;
+
+    const birdVert = `
+      attribute float aSize; uniform float uTime; uniform float uScroll; varying float vDepth;
+      void main(){
+        vec3 pos = position;
+        pos.y += sin(uTime * 3.0 + pos.x * 0.05) * 8.0;
+
+        vec4 originalMv = modelViewMatrix * vec4(pos, 1.0);
+        vDepth = smoothstep(-2500.0, -500.0, originalMv.z);
+
+        float s = clamp((uScroll - 0.1) * 1.25, 0.0, 1.0);
+        float easeScroll = s * s * s;
+        float dropFactor = 1.0 + fract(sin(dot(pos.xz, vec2(12.9898, 78.233))) * 43758.5453) * 3.0;
+
+        pos.y -= easeScroll * 3500.0 * dropFactor;
+        pos.x += sin(pos.y * 0.05) * easeScroll * 400.0;
+
+        vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+        gl_Position = projectionMatrix * mvPosition;
+
+        float size = aSize * (1000.0 / -mvPosition.z);
+        float inkExpansion = 1.0 + easeScroll * 12.0;
+        gl_PointSize = size * inkExpansion;
+      }
+    `;
+
+    const birdFrag = `
+      uniform vec3 uColor; uniform float uScroll; varying float vDepth;
+      void main(){
+        vec2 uv = gl_PointCoord - vec2(0.5);
+        float v = abs(uv.x*1.5) + uv.y*0.8;
+
+        float s = clamp((uScroll - 0.1) * 1.25, 0.0, 1.0);
+        float shapeNormal = smoothstep(0.4, 0.05, abs(v - 0.1));
+        float shapeMelt = smoothstep(0.5, 0.1, length(uv));
+        float shape = mix(shapeNormal, shapeMelt, smoothstep(0.0, 0.4, s));
+
+        if (shape < 0.01) discard;
+
+        vec3 targetColor = vec3(0.9, 0.9, 0.95);
+        vec3 finalColor = mix(uColor, targetColor, smoothstep(0.2, 0.8, uScroll));
+
+        float alphaFade = 1.0 - smoothstep(0.85, 1.0, uScroll);
+        gl_FragColor = vec4(finalColor, shape * mix(0.2, 0.9, vDepth) * alphaFade);
+      }
+    `;
+
+    // ==========================================
+    // 2. 地形生成数学（从 React 版本直接移植）
+    // ==========================================
+    function hash(n){ return Math.abs(Math.sin(n) * 10000.0) % 1.0; }
+    function mix(a,b,t){ return a*(1.0-t)+b*t; }
+    function clamp(x,a,b){ return Math.max(a, Math.min(b, x)); }
+    function smoothstep(edge0, edge1, x){
+      let t = clamp((x - edge0) / (edge1 - edge0), 0, 1);
+      return t * t * (3 - 2 * t);
+    }
+    function noise2D(x, z){
+      const ix = Math.floor(x), iz = Math.floor(z);
+      const fx = x - ix, fz = z - iz;
+      const ux = fx * fx * (3.0 - 2.0 * fx);
+      const n00 = hash(ix + iz * 57),
+            n10 = hash(ix + 1 + iz * 57),
+            n01 = hash(ix + (iz + 1) * 57),
+            n11 = hash(ix + 1 + (iz + 1) * 57);
+      return mix(mix(n00, n10, ux), mix(n01, n11, ux), fz);
+    }
+    function fbm(x, z, oct=5){
+      let v=0, a=0.5;
+      for(let i=0;i<oct;i++){
+        v += a * noise2D(x, z);
+        x = x * 2.05 + 100;
+        z = z * 2.25 + 100;
+        a *= 0.5;
+      }
+      return v;
+    }
+    function ridge1D(x){
+      let n = fbm(x * 0.0012, 10.0, 5);
+      let r = 1.0 - Math.abs(n - 0.5) * 2.0;
+      r = Math.pow(Math.max(0, r), 2.2);
+      let cut = fbm(x * 0.004, 200.0, 3);
+      cut = smoothstep(0.25, 0.75, cut);
+      return r * cut;
+    }
+    function bandMask(z, center, width){
+      let d = Math.abs(z - center) / width;
+      return Math.pow(Math.max(0, 1.0 - d), 2.0);
+    }
+    function centralMistFactor(x){
+      return 1.0 - Math.exp(-Math.pow(x / 520.0, 2.0));
+    }
+    function getTerrainData(x, z){
+      const fg = bandMask(z, 1000, 350);
+      const near = bandMask(z, 220, 460);
+      const mid = bandMask(z, -160, 560);
+      const far = bandMask(z, -720, 720);
+
+      let fgCut = smoothstep(100.0, 1200.0, x);
+      let rightBank = Math.max(0, 1.0 - Math.pow((x - 1400) / 800, 2)) * 380.0;
+      let sFg = ridge1D(x - 900) * 120 + rightBank;
+      let sNear = ridge1D(x + 80) * 240;
+      let sMid = ridge1D(x - 220) * 720;
+      let sFar = ridge1D(x + 520) * 420;
+
+      let texN = fbm(x * 0.003, z * 0.004, 4);
+      let texR = 1.0 - Math.abs(texN - 0.5) * 2.0;
+      texR = Math.pow(Math.max(0, texR), 2.8);
+
+      let h =
+        fg * fgCut * (sFg + texR * 120) +
+        near * (sNear + texR * 140) +
+        mid * (sMid + texR * 240) +
+        far * (sFar + texR * 120);
+
+      let cm = centralMistFactor(x);
+      let cmFinal = mix(cm, 1.0, fg * 0.8);
+      h *= cmFinal * 0.65 + 0.35;
+      h -= z * 0.25;
+
+      let baseH = h - 520.0;
+      baseH += fg * fgCut * 350.0;
+      return { h: baseH, ridge: texR, cm: cm, fg: fg * fgCut, far: far };
+    }
+
+    // ==========================================
+    // 3. Vanilla HTML/JS 版本：复刻 React useEffect + scroll逻辑 + loading
+    // ==========================================
+    const backgroundEl = document.getElementById('background');
+    const wrapperEl = document.getElementById('wrapper');
+    const uiEl = document.getElementById('ui');
+    const blackPageEl = document.getElementById('black-page');
+    const mountEl = document.getElementById('mount');
+    const loadingEl = document.getElementById('loading');
+    const progressFillEl = document.getElementById('progress-fill');
+    const loadingTextEl = document.getElementById('loading-text');
+
+    let isMounted = true;
+    let animationFrameId = null;
+
+    let scene = null, camera = null, renderer = null, mountainMat = null, mountain = null;
+    let birdGeo = null, birdMesh = null;
+    const birdData = [];
+
+    let scrollProgress = 0;
+    let isSceneVisible = true;
+
+    function handleScroll(){
+      if(!isMounted) return;
+      const progress = Math.min(window.scrollY / window.innerHeight, 1);
+      scrollProgress = progress;
+
+      wrapperEl.style.transform = `translate3d(0, ${progress * 80}px, 0)`;
+      uiEl.style.opacity = String(1 - progress * 1.5);
+
+      if (progress > 0.4) {
+        backgroundEl.style.backgroundColor = "#0A0A0A";
+        blackPageEl.style.opacity = String((progress - 0.4) * 2);
+        blackPageEl.style.pointerEvents = "auto";
+      } else {
+        backgroundEl.style.backgroundColor = "#FFFFFF";
+        blackPageEl.style.opacity = "0";
+        blackPageEl.style.pointerEvents = "none";
+      }
+
+      isSceneVisible = progress < 0.99;
+
+      if (mountainMat) mountainMat.uniforms.uScroll.value = progress;
+      if (birdMesh) birdMesh.material.uniforms.uScroll.value = progress;
+    }
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    async function init3D(){
+      try {
+        scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0xffffff, 0.0001);
+
+        camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 7000);
+        camera.position.set(0, 260, 2450);
+
+        const isMobile = window.innerWidth <= 768;
+        const hwCores = navigator.hardwareConcurrency || 4;
+        const isLowEnd = isMobile || hwCores <= 4;
+
+        renderer = new THREE.WebGLRenderer({
+          antialias: false,
+          alpha: true,
+          powerPreference: "high-performance",
+        });
+        renderer.setPixelRatio(Math.min(isLowEnd ? 1.0 : 1.5, window.devicePixelRatio || 1));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0xffffff, 0);
+
+        mountEl.appendChild(renderer.domElement);
+
+        const lx = -0.8, ly = 0.4, lz = -0.4;
+        const extX = 2600, minZ = -1200, maxZ = 1200;
+
+        const cellSize = isLowEnd ? 16.0 : 13.0;
+        const density = isLowEnd ? 30.0 : 55.0;
+
+        const MAX_POINTS = isLowEnd ? 100000 : 350000;
+        const positions = new Float32Array(MAX_POINTS * 3);
+        const sizes = new Float32Array(MAX_POINTS);
+        const alphas = new Float32Array(MAX_POINTS);
+        let pIdx = 0;
+
+        const totalSteps = Math.floor((extX * 2) / cellSize);
+        let lastYield = performance.now();
+
+        for (let cx = -extX, step = 0; cx <= extX; cx += cellSize, step++) {
+          if(!isMounted) return;
+
+          for (let cz = minZ; cz <= maxZ; cz += cellSize) {
+            const tx = cx + cellSize / 2, tz = cz + cellSize / 2;
+            const t = getTerrainData(tx, tz);
+            if (t.h < -330 && t.fg < 0.1) continue;
+
+            const eps = 4.0;
+            const hx = getTerrainData(tx + eps, tz).h;
+            const hz = getTerrainData(tx, tz + eps).h;
+
+            let nx = -(hx - t.h) / eps;
+            let nz = -(hz - t.h) / eps;
+            let ny = 1.0;
+
+            const nlen = Math.sqrt(nx*nx + ny*ny + nz*nz);
+            nx /= nlen; ny /= nlen; nz /= nlen;
+
+            const dotLight = nx * lx + ny * ly + nz * lz;
+
+            let shadow = Math.pow(smoothstep(0.1, -0.6, dotLight), 2.5);
+            let depth = smoothstep(minZ, maxZ, cz);
+            let count = 0;
+
+            if (t.fg > 0.05) {
+              let vegetation = smoothstep(50, 400, t.h) * smoothstep(0.85, 0.98, ny);
+              let prob = shadow * 1.3 + Math.pow(t.ridge, 3.0) * 1.5 + vegetation * 3.0;
+              prob *= 1.0 - smoothstep(-0.1, 0.5, dotLight) * 0.95;
+              prob *= mix(0.1, 1.4, depth);
+              prob *= t.fg * 1.5;
+
+              count = Math.floor(prob * density * 1.2);
+              count = Math.min(count, isLowEnd ? 20 : 45);
+
+              for (let p = 0; p < count; p++) {
+                if (pIdx >= MAX_POINTS) break;
+                const px = cx + Math.random() * cellSize;
+                const pz = cz + Math.random() * cellSize;
+                const ph = getTerrainData(px, pz).h;
+
+                positions[pIdx*3] = px;
+                positions[pIdx*3 + 1] = ph;
+                positions[pIdx*3 + 2] = pz;
+
+                sizes[pIdx] = mix(1.5, 4.5, depth) + shadow * 2.0 + vegetation * 6.0;
+                alphas[pIdx] = mix(0.1, 0.9, depth * Math.min(prob, 1.2));
+                pIdx++;
+              }
+            } else {
+              let farFactor = smoothstep(-100.0, -1000.0, cz);
+              let isPeak = smoothstep(100.0, 500.0, t.h);
+
+              let cm = t.cm;
+              let probStructure = Math.pow(t.ridge, 3.4) * 2.0 + shadow * 1.15;
+              probStructure *= 0.5 + 0.5 * cm;
+              probStructure *= mix(0.25, 1.15, depth);
+
+              const hazeCut = smoothstep(-260, 220, t.h);
+              probStructure *= mix(0.55, 1.0, hazeCut);
+              probStructure *= 1.0 + farFactor * isPeak * 2.0;
+
+              count = Math.floor(probStructure * density);
+              count = Math.min(count, isLowEnd ? 8 : 18);
+
+              for (let p = 0; p < count; p++) {
+                if (pIdx >= MAX_POINTS) break;
+                const sid = (Math.floor(tx / 18) + Math.floor(tz / 18) * 911) * 37.1 + p * 13.7;
+                const rx = hash(sid * 1.3);
+                const rz = hash(sid * 7.9);
+
+                const px = cx + rx * cellSize;
+                const pz = cz + rz * cellSize;
+                const ph = getTerrainData(px, pz).h;
+
+                positions[pIdx*3] = px;
+                positions[pIdx*3 + 1] = ph;
+                positions[pIdx*3 + 2] = pz;
+
+                let s2 = mix(1.2, 3.6, depth) + shadow * 2.0 + Math.pow(t.ridge, 2.0) * 1.5;
+                if (farFactor > 0.1) s2 += 15.0 * farFactor * isPeak;
+                sizes[pIdx] = s2;
+
+                let a2 = mix(0.1, 0.6, depth) * (0.55 + 0.45 * cm) * mix(0.85, 1.0, shadow);
+                if (farFactor > 0.1) a2 += 0.8 * farFactor * isPeak;
+                alphas[pIdx] = clamp(a2, 0.05, 1.0);
+
+                pIdx++;
+              }
+            }
+          }
+
+          if (performance.now() - lastYield > 30) {
+            const pct = Math.min(Math.floor((step / totalSteps) * 100), 99);
+            progressFillEl.style.width = pct + "%";
+            loadingTextEl.innerText = pct + "%";
+            await new Promise(r => requestAnimationFrame(r));
+            lastYield = performance.now();
+          }
+        }
+
+        if(!isMounted) return;
+
+        progressFillEl.style.width = "100%";
+        loadingTextEl.innerText = "100%";
+        await new Promise(r => setTimeout(r, 200));
+
+        // hide loading
+        loadingEl.style.opacity = "0";
+        loadingEl.style.visibility = "hidden";
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute("position", new THREE.BufferAttribute(positions.slice(0, pIdx * 3), 3));
+        geo.setAttribute("aSize", new THREE.BufferAttribute(sizes.slice(0, pIdx), 1));
+        geo.setAttribute("aAlpha", new THREE.BufferAttribute(alphas.slice(0, pIdx), 1));
+
+        mountainMat = new THREE.ShaderMaterial({
+          vertexShader: mountainVert,
+          fragmentShader: mountainFrag,
+          uniforms: {
+            uTime: { value: 0 },
+            uColor: { value: new THREE.Color(0x2a2a2a) },
+            uScroll: { value: 0 },
+          },
+          transparent: true,
+          blending: THREE.NormalBlending,
+          depthWrite: false,
+        });
+
+        mountain = new THREE.Points(geo, mountainMat);
+        mountain.renderOrder = 30;
+        scene.add(mountain);
+
+        // birds
+        const FLOCK_COUNT = 3;
+        const BIRDS_PER_FLOCK = 15;
+        const TOTAL_BIRDS = FLOCK_COUNT * BIRDS_PER_FLOCK;
+
+        const bPos = new Float32Array(TOTAL_BIRDS * 3);
+        const bSize = new Float32Array(TOTAL_BIRDS);
+
+        for (let f = 0; f < FLOCK_COUNT; f++) {
+          const flockZ = -500 - Math.random() * 1500;
+          const flockY = 300 + Math.random() * 400;
+          const flockSpeed = 0.8 + Math.random() * 0.5;
+          const startXOffset = f * 2500 + Math.random() * 2000;
+
+          for (let b = 0; b < BIRDS_PER_FLOCK; b++) {
+            const offsetX = b * (30 + Math.random() * 20);
+            const offsetZ = (Math.random() - 0.5) * 150 * (b * 0.1 + 1);
+            const offsetY = (Math.random() - 0.5) * 50;
+            bSize[f * BIRDS_PER_FLOCK + b] = 15 + Math.random() * 10;
+            birdData.push({
+              baseX: -2500 - startXOffset + offsetX,
+              baseY: flockY + offsetY,
+              baseZ: flockZ + offsetZ,
+              speed: flockSpeed,
+            });
+          }
+        }
+
+        birdGeo = new THREE.BufferGeometry();
+        birdGeo.setAttribute("position", new THREE.BufferAttribute(bPos, 3).setUsage(THREE.DynamicDrawUsage));
+        birdGeo.setAttribute("aSize", new THREE.BufferAttribute(bSize, 1));
+
+        const bMat = new THREE.ShaderMaterial({
+          vertexShader: birdVert,
+          fragmentShader: birdFrag,
+          uniforms: {
+            uColor: { value: new THREE.Color(0x111111) },
+            uTime: { value: 0 },
+            uScroll: { value: 0 },
+          },
+          transparent: true,
+          depthWrite: false,
+        });
+
+        birdMesh = new THREE.Points(birdGeo, bMat);
+        birdMesh.renderOrder = 90;
+        scene.add(birdMesh);
+
+        mountEl.style.opacity = "1";
+
+        startAnimation();
+      } catch (e) {
+        console.error("Three.js Initialization Error:", e);
+        loadingEl.style.opacity = "0";
+        loadingEl.style.visibility = "hidden";
+        mountEl.style.opacity = "1";
+      }
+    }
+
+    function startAnimation(){
+      const baseFogColor = new THREE.Color(0xffffff);
+      const targetFogColor = new THREE.Color(0x000000);
+      let lastTime = performance.now();
+
+      function animate(){
+        animationFrameId = requestAnimationFrame(animate);
+        if(!isSceneVisible) return;
+
+        const now = performance.now();
+        const dt = Math.min(0.033, (now - lastTime) / 1000);
+        lastTime = now;
+        const t = now * 0.001;
+
+        if (mountainMat) mountainMat.uniforms.uTime.value = t;
+
+        if (birdGeo && birdMesh) {
+          const positions = birdGeo.attributes.position.array;
+          for (let i = 0; i < birdData.length; i++) {
+            const i3 = i * 3;
+            const d = birdData[i];
+            d.baseX += d.speed * dt * 60.0;
+            if (d.baseX > 2500) d.baseX = -4500 - Math.random() * 3000;
+            positions[i3] = d.baseX;
+            positions[i3 + 1] = d.baseY;
+            positions[i3 + 2] = d.baseZ;
+          }
+          birdGeo.attributes.position.needsUpdate = true;
+          birdMesh.material.uniforms.uTime.value = t;
+        }
+
+        scene.fog.color.copy(baseFogColor).lerp(targetFogColor, smoothstep(0.2, 0.8, scrollProgress));
+        renderer.render(scene, camera);
+      }
+
+      animate();
+    }
+
+    function handleResize(){
+      if(!camera || !renderer) return;
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      const isMobileResize = window.innerWidth <= 768;
+      renderer.setPixelRatio(Math.min(isMobileResize ? 1.0 : 1.5, window.devicePixelRatio || 1));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    window.addEventListener("resize", handleResize, { passive: true });
+
+    // init
+    handleScroll();
+    init3D();
+
+    // cleanup on page unload
+    window.addEventListener("beforeunload", () => {
+      isMounted = false;
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleResize);
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+
+      try {
+        if (renderer && mountEl && renderer.domElement && renderer.domElement.parentNode === mountEl) {
+          mountEl.removeChild(renderer.domElement);
+        }
+        if (mountain) {
+          mountain.geometry.dispose();
+          mountain.material.dispose();
+        }
+        if (birdMesh) {
+          birdMesh.geometry.dispose();
+          birdMesh.material.dispose();
+        }
+        if (renderer) renderer.dispose();
+      } catch(e) {}
+    });
+  </script>
+</body>
+</html>

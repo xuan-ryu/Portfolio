@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="VR Monarch Butterfly — VR Design case study by XUYUAN." />
+  <title>VR Monarch Butterfly — XUYUAN</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="../css/global.css" />
+  <link rel="stylesheet" href="../css/page-project.css" />
+</head>
+<body>
+
+<nav class="content-nav" role="navigation" aria-label="Primary navigation">
+  <div class="content-nav-inner">
+    <a href="../index.html" class="nav-logo">XUYUAN</a>
+    <div class="nav-links">
+      <a href="./index.html">work</a>
+      <a href="../about/">about</a>
+      <a href="../contact/">contact</a>
+    </div>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+<div class="nav-drawer" aria-hidden="true">
+  <a href="./index.html">work</a>
+  <a href="../about/">about</a>
+  <a href="../contact/">contact</a>
+</div>
+
+<main>
+  <div class="proj-hero cover-vr-monarch placeholder">
+    <span class="cover-label">VR Monarch Butterfly — Cover</span>
+  </div>
+
+  <div class="container">
+    <div class="proj-intro" data-fade>
+      <p class="label proj-eyebrow">VR Design · Environmental Education · Unity · HCI Research</p>
+      <h1 class="proj-title">VR Monarch Butterfly</h1>
+      <p class="proj-oneliner">An immersive VR education experience tracing the monarch butterfly migration through embodied perspective-taking — designed to build environmental empathy.</p>
+    </div>
+
+    <div class="proj-meta" data-fade>
+      <div class="meta-cell">
+        <div class="meta-label">Role</div>
+        <div class="meta-value">UX/XR Designer<br>Interaction Designer</div>
+      </div>
+      <div class="meta-cell">
+        <div class="meta-label">Duration</div>
+        <div class="meta-value">2023.02 – 2023.12<br>10 months</div>
+      </div>
+      <div class="meta-cell">
+        <div class="meta-label">Team</div>
+        <div class="meta-value">4 members (HCI lab)</div>
+      </div>
+      <div class="meta-cell">
+        <div class="meta-label">Tools</div>
+        <div class="meta-value">
+          <span class="pill">Unity</span>
+          <span class="pill">Meta Quest 2</span>
+          <span class="pill">Figma</span>
+          <span class="pill">Blender</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="proj-layout">
+      <aside class="proj-sidebar" aria-label="Section navigation">
+        <nav>
+          <a href="#overview">Overview</a>
+          <a href="#problem">Problem</a>
+          <a href="#process">Process</a>
+          <a href="#solution">Solution</a>
+          <a href="#outcome">Outcome</a>
+          <a href="#reflection">Reflection</a>
+        </nav>
+      </aside>
+
+      <div class="proj-content">
+
+        <section class="proj-section" id="overview">
+          <h2 class="proj-section-title">Overview</h2>
+          <p>Monarch butterfly populations have declined by over 80% in the past two decades. Despite the scale of the ecological crisis, public awareness and behavioral change have been slow. Abstract statistics don't move people; lived experience might.</p>
+          <p>This project, developed in Cornell's HCI research lab, investigated whether embodied VR perspective-taking (becoming a monarch butterfly, not just observing one) could measurably increase environmental concern and pro-conservation behavior intentions.</p>
+        </section>
+
+        <section class="proj-section" id="problem">
+          <h2 class="proj-section-title">Problem</h2>
+          <p>Environmental education typically operates at two extremes: dry factual content (ineffective at motivating behavior change) or emotionally manipulative imagery (creates distress rather than agency). We needed a third path: experiential learning that is emotionally engaging without being psychologically destabilizing.</p>
+          <ul>
+            <li><strong>VR presence:</strong> How do you create genuine sense of embodiment in a non-human form, within current hardware constraints?</li>
+            <li><strong>Educational accuracy:</strong> VR encourages simplification; the monarch's biology and migration are complex and important to represent accurately.</li>
+            <li><strong>Comfort and accessibility:</strong> Motion sickness is a major barrier in ecological VR. Design must prioritize comfort without sacrificing immersion.</li>
+          </ul>
+        </section>
+
+        <section class="proj-section" id="process">
+          <h2 class="proj-section-title">Process</h2>
+
+          <h4>Literature Review</h4>
+          <p>We reviewed 40+ papers on VR-based empathy, environmental education, and non-human embodiment. Key finding: studies using "first-person embodiment" (you are the entity) showed significantly stronger behavioral intention changes than "third-person observation" (you watch the entity).</p>
+
+          <h4>Ecological Consultation</h4>
+          <p>Partnered with Cornell's Entomology department to ensure biological accuracy. Key design constraint: monarch butterflies navigate using magnetic field sensing and sun position — two things that don't translate intuitively to game controllers. We spent three design iterations solving this locomotion problem.</p>
+
+          <h4>Iterative VR Prototyping</h4>
+          <p>Five prototype iterations over 6 months. Key design decisions were resolved through A/B testing with 30 participants:</p>
+          <ul>
+            <li>First-person perspective consistently outperformed third-person for empathy measures</li>
+            <li>Thermals (warm air updrafts) as the primary locomotion mechanic — more biologically accurate and significantly reduced motion sickness vs. joystick flight</li>
+            <li>Sparse UI, diegetic narration — information delivered as "inner experience" rather than HUD overlay</li>
+          </ul>
+          <div class="proj-img">
+            <span class="img-label">Prototype 3 — locomotion mechanic testing session</span>
+          </div>
+        </section>
+
+        <section class="proj-section" id="solution">
+          <h2 class="proj-section-title">Solution</h2>
+
+          <h4>Embodied Migration Journey</h4>
+          <p>The 15-minute experience follows a monarch butterfly's 3,000-mile migration from central Canada to the Oyamel forests of central Mexico. Players "become" the butterfly — sensing thermals, navigating by the sun, stopping to feed at milkweed patches, and experiencing the threats (pesticides, habitat loss, climate disruption) that have decimated the population.</p>
+
+          <h4>Thermal Locomotion System</h4>
+          <p>Rather than joystick-based flight (which causes motion sickness and feels un-butterfly-like), we developed a thermal navigation system: players tilt and orient their bodies to find warm air currents, which lift and propel them. It's slower than conventional VR movement, but creates a meditative, genuinely embodied sensation of soaring.</p>
+
+          <h4>Ecological Threat Sequences</h4>
+          <p>Three scripted "threat sequences" — pesticide exposure (sensory disruption effects), habitat fragmentation (milkweed patches replaced by farmland), and climate delay (late autumn temperatures disrupting navigation cues) — convey the ecological pressures through direct experience rather than statistics.</p>
+          <div class="proj-img">
+            <span class="img-label">Solution — thermal locomotion interface and threat sequence</span>
+          </div>
+        </section>
+
+        <section class="proj-section" id="outcome">
+          <h2 class="proj-section-title">Outcome</h2>
+          <div class="stat-grid">
+            <div class="stat-cell">
+              <div class="stat-number">2.3×</div>
+              <div class="stat-desc">Higher conservation action intention vs. video control group</div>
+            </div>
+            <div class="stat-cell">
+              <div class="stat-number">78%</div>
+              <div class="stat-desc">Reduction in motion sickness (vs. joystick prototype)</div>
+            </div>
+            <div class="stat-cell">
+              <div class="stat-number">4.8/5</div>
+              <div class="stat-desc">Average "sense of presence" rating</div>
+            </div>
+          </div>
+          <p style="margin-top:24px;">Findings submitted to CHI 2024. The experience has been exhibited at the Cornell Science Center and is under discussion for deployment in K–12 environmental education programs.</p>
+        </section>
+
+        <section class="proj-section" id="reflection">
+          <h2 class="proj-section-title">Reflection</h2>
+          <p>The thermal locomotion system was the most important design decision of the project — and the one we almost didn't make. Every conventional VR precedent pointed toward joystick flight. The thermal system required building a custom physics simulation, and it took until the third prototype for the team to fully believe it would work.</p>
+          <p>The lesson: the most authentic design choice and the most comfortable engineering choice are often different. Authentic design is usually worth the engineering cost.</p>
+          <p>I'd want to extend the experience to 30 minutes and add a "post-migration reflection" segment — a quiet moment at the Oyamel forest where players can look back on their journey. That emotional landing feels important and we ran out of time to build it properly.</p>
+        </section>
+
+        <nav class="proj-nav" aria-label="Project navigation">
+          <a href="hunger-1942.html" class="proj-nav-item">
+            <span class="proj-nav-label">← Previous</span>
+            <span class="proj-nav-title">Hunger 1942</span>
+          </a>
+          <a href="digital-socialism-domain.html" class="proj-nav-item next">
+            <span class="proj-nav-label">Next →</span>
+            <span class="proj-nav-title">Digital Socialism Domain</span>
+          </a>
+        </nav>
+
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-left">
+      <div class="footer-logo">XUYUAN</div>
+      <p class="footer-copy">© 2024 XUYUAN. All rights reserved.</p>
+    </div>
+    <nav class="footer-nav">
+      <a href="./index.html">work</a>
+      <a href="../about/">about</a>
+      <a href="../contact/">contact</a>
+    </nav>
+    <div class="footer-social">
+      <a href="https://www.linkedin.com/" rel="noopener" target="_blank">linkedin</a>
+      <a href="https://www.instagram.com/" rel="noopener" target="_blank">instagram</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../js/shared-nav.js"></script>
+</body>
+</html>

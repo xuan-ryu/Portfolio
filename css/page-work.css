@@ -1,0 +1,51 @@
+/* ================================================================
+   WORK — listing page
+   ================================================================ */
+
+.work-header {
+  padding: 72px 0 56px;
+  border-bottom: 1px solid var(--line);
+}
+.work-header h1 {
+  font-family: var(--serif);
+  font-size: clamp(52px, 9vw, 110px);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.0;
+}
+.work-header p {
+  margin-top: 18px;
+  font-size: 15px;
+  color: var(--muted);
+  max-width: 480px;
+  line-height: 1.7;
+}
+
+/* ── Work grid ──────────────────────────────────────────── */
+.work-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 40px 0 88px;
+}
+.work-grid .project-card:first-child {
+  grid-column: span 2;
+}
+.work-grid .project-card:first-child .project-cover {
+  aspect-ratio: 21 / 9;
+}
+
+@media (max-width: 680px) {
+  .work-grid { grid-template-columns: 1fr; }
+  .work-grid .project-card:first-child { grid-column: span 1; }
+  .work-grid .project-card:first-child .project-cover { aspect-ratio: 16 / 9; }
+}
+
+/* ── Project count label ────────────────────────────────── */
+.work-count {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--dim);
+  margin-top: 8px;
+}

@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:courses.cs.washington.edu)",
+      "WebFetch(domain:www.mdpi.com)",
+      "WebFetch(domain:iopscience.iop.org)",
+      "Bash(wc -l \"c:\\\\Users\\\\Admin\\\\Downloads\\\\InkKoi \\(2\\).tsx\")",
+      "WebSearch",
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:tympanus.net)",
+      "WebFetch(domain:www.josephcollicoat.com)",
+      "WebFetch(domain:ogblocks.dev)",
+      "WebFetch(domain:blog.maximeheckel.com)",
+      "WebFetch(domain:brad-carter.medium.com)",
+      "WebFetch(domain:css-tricks.com)",
+      "WebFetch(domain:bugzilla.mozilla.org)",
+      "Bash(git --version)",
+      "Bash(gh --version)"
+    ]
+  }
+}

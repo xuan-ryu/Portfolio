@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数字山水 - 气韵生动 (稳定点苔版)</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%; height: 100%; margin: 0;
+            overflow: hidden; background-color: #FFFFFF; 
+            font-family: 'STSong', 'SimSun', serif;
+        }
+        #canvas-container {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%; z-index: 1;
+            opacity: 0; transition: opacity 1.5s ease-in;
+        }
+        #loading-tip {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 16px; color: #111; letter-spacing: 0.5em; z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; gap: 15px;
+        }
+        .progress-bar { width: 150px; height: 1px; background: #EEE; position: relative; overflow: hidden; }
+        #progress-fill { position: absolute; left: 0; top: 0; height: 100%; width: 0%; background: #111; }
+        .ui { position: absolute; inset: 0; pointer-events: none; z-index: 5; color: #111; }
+        .brand { position: absolute; top: 40px; right: 5vw; text-align: right; }
+        .brand .zh { font-size: clamp(28px,4vw,56px); font-weight: 900; letter-spacing: 0.4em; }
+        .brand .en { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: #666; margin-top: 5px; }
+        .side-text { position: absolute; top: 50%; right: 5vw; transform: translateY(-50%); writing-mode: vertical-rl; letter-spacing: 1.2em; font-weight: 900;}
+    </style>
+</head>
+<body>
+
+<div id="loading-tip">
+    <div>运 笔 点 苔</div>
+    <div class="progress-bar"><div id="progress-fill"></div></div>
+    <div id="loading-text">0%</div>
+</div>
+<div id="canvas-container"></div>
+
+<div class="ui">
+    <div class="brand">
+        <div class="zh">气韵生动</div>
+        <div class="en">Vegetation & Structural Ridges</div>
+    </div>
+    <div class="side-text">墨 积 如 山</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+(function () {
+    'use strict';
+
+    if (typeof THREE === 'undefined') {
+        document.getElementById('loading-tip').innerHTML = 'Engine Load Failed.<br>请检查网络连接或尝试刷新。';
+        return;
+    }
+
+    const mountainVert = `
+        uniform float uTime;
+        attribute float aSize;
+        attribute float aAlpha;
+        varying float vAlpha;
+        void main() {
+            vec3 pos = position;
+            pos.y += sin(uTime * 0.4 + pos.x * 0.01) * 0.4;
+            vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+            gl_Position = projectionMatrix * mvPosition;
+            gl_PointSize = aSize * (1000.0 / -mvPosition.z);
+            vAlpha = aAlpha;
+        }
+    `;
+    const mountainFrag = `
+        uniform vec3 uColor;
+        varying float vAlpha;
+        void main() {
+            float d = distance(gl_PointCoord, vec2(0.5));
+            float shape = smoothstep(0.5, 0.1, d);
+            if (vAlpha * shape < 0.01) discard;
+            gl_FragColor = vec4(uColor, vAlpha * shape); 
+        }
+    `;
+
+    function hash(n) { return Math.abs(Math.sin(n) * 1e4) % 1; }
+    function mix(a, b, t) { return a * (1.0 - t) + b * t; }
+    function smoothstep(min, max, value) {
+        let x = Math.max(0, Math.min(1, (value - min) / (max - min)));
+        return x * x * (3 - 2 * x);
+    }
+    
+    function noise2D(x, z) {
+        const ix = Math.floor(x), iz = Math.floor(z);
+        const fx = x - ix, fz = z - iz;
+        const ux = fx * fx * (3.0 - 2.0 * fx);
+        const n00 = hash(ix + iz * 57);
+        const n10 = hash(ix + 1 + iz * 57);
+        const n01 = hash(ix + (iz + 1) * 57);
+        const n11 = hash(ix + 1 + (iz + 1) * 57);
+        return mix(mix(n00, n10, ux), mix(n01, n11, ux), fz);
+    }
+    
+    function fbm(x, z, oct = 5) {
+        let v = 0, a = 0.5;
+        for (let i = 0; i < oct; i++) {
+            v += a * noise2D(x, z);
+            x = x * 2.1 + 100; z = z * 2.3 + 100; a *= 0.5;
+        }
+        return v;
+    }
+
+    function getTerrainData(x, z) {
+        let hBase = fbm(x * 0.001, z * 0.001, 5) * 400.0;
+        let rawRidge = 1.0 - Math.abs(fbm(x * 0.003, z * 0.003, 4) - 0.5) * 2.0;
+        
+        // 左重右轻布局
+        let dL = Math.sqrt(Math.pow((x + 800)/800, 2) + Math.pow((z + 100)/500, 2));
+        let peakL = Math.exp(-Math.pow(dL, 1.4)) * 1000.0;
+
+        let dR = Math.sqrt(Math.pow((x - 1300)/400, 2) + Math.pow((z - 200)/300, 2));
+        let peakR = Math.exp(-Math.pow(dR, 2.0)) * 750.0;
+
+        // 中央留白
+        let centerGap = 1.0 - Math.exp(-Math.pow(x / 500.0, 2.0));
+        
+        let hFinal = (hBase + rawRidge * 250.0 + peakL + peakR) * (centerGap * 0.7 + 0.3);
+        hFinal -= z * 0.45; 
+
+        return { h: hFinal - 450.0, ridge: rawRidge };
+    }
+
+    let scene, camera, renderer;
+    const container = document.getElementById('canvas-container');
+    const fillBar = document.getElementById('progress-fill');
+    const loadText = document.getElementById('loading-text');
+
+    async function init() {
+        scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0xFFFFFF, 0.0003);
+        camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 6000);
+        camera.position.set(0, 250, 2400);
+        
+        renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0xFFFFFF, 1);
+        container.appendChild(renderer.domElement);
+
+        const positions = [], sizes = [], alphas = [];
+        const lx = -0.8, ly = 0.4, lz = -0.4;
+        const extX = 2600, minZ = -1200, maxZ = 600;
+        const cellSize = 12.0, density = 70.0;
+
+        const totalSteps = Math.floor((extX * 2) / cellSize);
+        let lastYield = performance.now();
+
+        for(let cx = -extX, step = 0; cx <= extX; cx += cellSize, step++) {
+            for(let cz = minZ; cz <= maxZ; cz += cellSize) {
+                let tx = cx + cellSize/2, tz = cz + cellSize/2;
+                let t = getTerrainData(tx, tz);
+                if (t.h < -300) continue;
+
+                let eps = 4.0;
+                let hx = getTerrainData(tx + eps, tz).h;
+                let hz = getTerrainData(tx, tz + eps).h;
+                let nx = -(hx - t.h)/eps, nz = -(hz - t.h)/eps, ny = 1.0;
+                let len = Math.sqrt(nx*nx + ny*ny + nz*nz);
+                nx/=len; ny/=len; nz/=len;
+
+                let dot = nx*lx + ny*ly + nz*lz;
+                let shadow = Math.pow(smoothstep(0.1, -0.6, dot), 2.5);
+                
+                // ★ 山顶加浓 (点苔逻辑)
+                // 海拔越高 (h > 150) 且表面越趋于平坦 (ny > 0.88) 概率越高
+                let vegetation = smoothstep(100, 450, t.h) * smoothstep(0.88, 0.96, ny);
+                
+                let prob = shadow * 1.3 + Math.pow(t.ridge, 3.0) * 1.5 + vegetation * 3.0;
+                
+                // 曝光与深度裁剪
+                prob *= (1.0 - smoothstep(-0.1, 0.5, dot) * 0.95);
+                let depth = smoothstep(minZ, maxZ, cz);
+                prob *= mix(0.1, 1.4, depth);
+
+                let cloud = mix(-50, 150, 1.0 - smoothstep(-1000, 500, cz));
+                let fade = Math.pow(smoothstep(cloud, cloud + 300, t.h), 2.5);
+                prob *= fade;
+
+                let count = Math.floor(prob * density);
+                for(let p=0; p<count; p++) {
+                    let px = cx + Math.random()*cellSize, pz = cz + Math.random()*cellSize;
+                    let ph = getTerrainData(px, pz).h;
+                    positions.push(px, ph, pz);
+                    // 苔点尺寸显著增大
+                    sizes.push(mix(1, 4, depth) + shadow * 2 + vegetation * 6); 
+                    alphas.push(mix(0.1, 0.9, depth * Math.min(prob, 1.2)));
+                }
+            }
+
+            if (performance.now() - lastYield > 30) {
+                let pct = Math.floor((step / totalSteps) * 100);
+                fillBar.style.width = loadText.innerText = pct + '%';
+                await new Promise(r => setTimeout(r, 0));
+                lastYield = performance.now();
+            }
+        }
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geo.setAttribute('aSize', new THREE.Float32BufferAttribute(sizes, 1));
+        geo.setAttribute('aAlpha', new THREE.Float32BufferAttribute(alphas, 1));
+
+        const mat = new THREE.ShaderMaterial({
+            vertexShader: mountainVert, fragmentShader: mountainFrag,
+            uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color(0x111111) } },
+            transparent: true, blending: THREE.MultiplyBlending, depthWrite: false
+        });
+
+        scene.add(new THREE.Points(geo, mat));
+        document.getElementById('loading-tip').style.display = 'none';
+        container.style.opacity = '1';
+
+        function animate() {
+            requestAnimationFrame(animate);
+            mat.uniforms.uTime.value = performance.now() * 0.001;
+            renderer.render(scene, camera);
+        }
+        animate();
+    }
+
+    init();
+})();
+</script>
+</body>
+</html>

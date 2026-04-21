@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>写实粒子 3D 荷花（保留一片叶子衬托）</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html,body{
+      width:100%;height:100%;
+      overflow:hidden;
+      background:#000;
+      font-family: 'EB Garamond', serif;
+      color:#fff;
+    }
+    #canvas-container{
+      position:absolute;inset:0;
+      z-index:1;
+      cursor:crosshair;
+    }
+    #ui-layer{
+      position:absolute;top:50%;left:50%;
+      transform:translate(-50%,-50%);
+      z-index:10;text-align:center;
+      transition:opacity .8s ease;
+      pointer-events:none;
+    }
+    #ui-layer>*{pointer-events:auto;}
+    h1{
+      font-weight:300;
+      letter-spacing:.1em;
+      font-size:32px;
+      margin-bottom:24px;
+      text-shadow:0 0 10px rgba(255,182,193,.45);
+    }
+    .upload-btn{
+      display:inline-block;
+      padding:15px 40px;
+      border:1px solid rgba(255,255,255,.28);
+      background:rgba(255,255,255,.05);
+      font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      font-size:12px;
+      letter-spacing:.3em;
+      text-transform:uppercase;
+      cursor:pointer;
+      backdrop-filter: blur(10px);
+      transition: all .5s ease;
+      box-shadow:0 0 20px rgba(255,255,255,.08);
+    }
+    .upload-btn:hover{
+      background:rgba(255,255,255,.18);
+      border-color:rgba(255,255,255,.75);
+      box-shadow:0 0 30px rgba(255,182,193,.25);
+    }
+    input[type="file"]{display:none;}
+    #hint{
+      position:absolute;bottom:50px;left:0;right:0;
+      text-align:center;
+      color:rgba(255,255,255,.6);
+      font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      font-size:12px;
+      letter-spacing:.2em;
+      text-transform:uppercase;
+      z-index:10;
+      pointer-events:none;
+      opacity:0;
+      transition:opacity 2s ease;
+      text-shadow:0 0 5px rgba(255,255,255,.25);
+    }
+  </style>
+</head>
+<body>
+  <div id="ui-layer">
+    <h1>Nebula Lotus Engine</h1>
+    <label class="upload-btn">
+      Ignite Image
+      <input type="file" id="imageInput" accept="image/*" />
+    </label>
+  </div>
+
+  <div id="hint">Flow through the stardust</div>
+  <div id="canvas-container"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <script>
+    let scene, camera, renderer;
+    let flowerPoints, leafPoints;
+    let flowerOriginal, leafOriginal;
+    let flowerVel, leafVel;
+    let animationId;
+    let clock = new THREE.Clock();
+
+    const SETTINGS = {
+      // 视觉尺度
+      fitToView: 0.72,
+      zDepthFlower: 160,
+      zDepthLeaf: 240,
+
+      // 粒子数量预算（防止卡）
+      maxFlowerParticles: 52000,
+      maxLeafParticles: 9000,
+
+      // 采样分辨率
+      maxDim: 520,
+
+      // 粒子尺寸
+      flowerMinSize: 1.4,
+      flowerMaxSize: 7.8,
+      leafMinSize: 2.8,
+      leafMaxSize: 9.5,
+
+      // 写实发光（克制）
+      colorBoostFlower: 1.25,
+      colorBoostLeaf: 0.65,
+
+      // 鼠标交互：小范围精致
+      repelRadius: 95,
+      repelForce: 2.35,
+      springForce: 0.018,
+      friction: 0.915,
+
+      // 花结构（决定“不成一坨”）
+      petalsLayers: 3,
+      petalWaves: 8.0,
+      petalBowl: 0.95,
+      petalTipLift: 0.62,
+      petalTipAt: 0.84,
+      petalTipWidth: 0.10,
+      petalRipple: 0.075,
+
+      // 分类阈值：从图里分离 花 vs 叶
+      alphaThreshold: 22,
+      darkCutoff: 10,
+
+      // 绿色识别（HSV）
+      greenHueMin: 80,
+      greenHueMax: 170,
+      greenSatMin: 0.18,
+      greenValMin: 0.12,
+
+      // 叶子只保留“一片衬托” -> 做一个柔和的“叶幕”
+      leafKeepRate: 0.18,      // 绿像素里只抽一部分
+      leafDarken: 0.55,        // 叶子更暗
+      leafAlpha: 0.16,         // 叶子更透明，作为衬托
+
+      // 花更清晰：边缘加权密度（让轮廓更像花瓣）
+      edgeBoost: 1.35,
+      centerProtect: 0.70      // 保护中心，不要被交互搅太散
+    };
+
+    const mouse = new THREE.Vector2(-9999, -9999);
+    const targetMousePos = new THREE.Vector3(-9999, -9999, 0);
+    const raycaster = new THREE.Raycaster();
+    const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+
+    function init3D(){
+      const container = document.getElementById('canvas-container');
+      scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x000000, 0.00055);
+
+      camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 1, 6000);
+      camera.position.z = 880;
+
+      renderer = new THREE.WebGLRenderer({ antialias:false, stencil:false, depth:false, powerPreference:"high-performance" });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setClearColor(0x000000, 1);
+      container.appendChild(renderer.domElement);
+
+      window.addEventListener('resize', onWindowResize);
+      container.addEventListener('mousemove', onMouseMove);
+      container.addEventListener('mouseleave', () => targetMousePos.set(-9999,-9999,0));
+      container.addEventListener('touchmove', (e) => {
+        mouse.x = (e.touches[0].clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(e.touches[0].clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+        raycaster.ray.intersectPlane(plane, targetMousePos);
+      }, { passive:true });
+    }
+
+    function getViewSizeAtZ0(){
+      const vFov = THREE.MathUtils.degToRad(camera.fov);
+      const viewH = 2 * Math.tan(vFov/2) * camera.position.z;
+      const viewW = viewH * camera.aspect;
+      return { viewW, viewH };
+    }
+
+    function rgbToHsv(r,g,b){
+      r/=255; g/=255; b/=255;
+      const max=Math.max(r,g,b), min=Math.min(r,g,b);
+      const d=max-min;
+      let h=0;
+      if(d!==0){
+        if(max===r) h=((g-b)/d)%6;
+        else if(max===g) h=(b-r)/d+2;
+        else h=(r-g)/d+4;
+        h*=60; if(h<0) h+=360;
+      }
+      const s = max===0 ? 0 : d/max;
+      const v = max;
+      return { h, s, v };
+    }
+
+    function buildFlowerZ(x,y, R, layerIndex){
+      const r = Math.min(1, Math.sqrt(x*x + y*y) / Math.max(1, R));
+      const theta = Math.atan2(y, x);
+
+      // 花瓣“整体盆形” + “边缘反卷抬起” + “轻微筋纹波”
+      const bowl = (1.0 - r) * SETTINGS.petalBowl;
+      const tipLift = Math.exp(-Math.pow((r-SETTINGS.petalTipAt)/SETTINGS.petalTipWidth, 2.0)) * SETTINGS.petalTipLift;
+      const waviness = Math.sin(theta * SETTINGS.petalWaves) * SETTINGS.petalRipple * (r*r);
+
+      // 层次：外层更展开更低一些，内层更竖更高一些
+      const layerT = (layerIndex / Math.max(1, SETTINGS.petalsLayers-1)); // 0..1
+      const layerOffset = (0.18 - layerT*0.34); // 内层偏高，外层偏低（相对）
+      const layerTight = (0.08 + layerT*0.16);  // 内层更“竖”，曲率更集中
+
+      const zShape = (bowl*(1.0-layerTight) + tipLift + waviness + layerOffset);
+      return zShape;
+    }
+
+    function allocatePetalLayer(x,y,R){
+      // 用半径把花瓣点分到不同层：外层/中层/内层
+      const r = Math.min(1, Math.sqrt(x*x + y*y) / Math.max(1, R));
+      if(r > 0.62) return 0;       // 外层
+      if(r > 0.34) return 1;       // 中层
+      return 2;                    // 内层
+    }
+
+    function makeShaderMaterial(options){
+      // options: { alphaScale, addCoreWhite, leafMode }
+      return new THREE.ShaderMaterial({
+        uniforms: {
+          uTime: { value: 0 },
+          uPixelRatio: { value: renderer.getPixelRatio() },
+          uAlphaScale: { value: options.alphaScale ?? 1.0 },
+          uCoreWhite: { value: options.addCoreWhite ?? 0.35 },
+        },
+        vertexShader: `
+          uniform float uPixelRatio;
+          uniform float uTime;
+          attribute vec3 aColor;
+          attribute float aSize;
+          varying vec3 vColor;
+          varying float vTw;
+
+          void main(){
+            vColor = aColor;
+
+            vec3 pos = position;
+
+            // 非常克制的呼吸漂浮：写实风不夸张
+            float tw = sin(uTime*0.35 + pos.x*0.004 + pos.y*0.004) * 0.35;
+            vTw = tw;
+            pos.z += tw * 2.5;
+
+            vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+            gl_Position = projectionMatrix * mv;
+
+            gl_PointSize = aSize * uPixelRatio * (620.0 / -mv.z);
+          }
+        `,
+        fragmentShader: `
+          uniform float uAlphaScale;
+          uniform float uCoreWhite;
+          varying vec3 vColor;
+          varying float vTw;
+
+          void main(){
+            float d = distance(gl_PointCoord, vec2(0.5));
+
+            // 写实：核心亮但不炸，边缘柔和
+            float core = smoothstep(0.10, 0.0, d);
+            float glow = exp(-d * 5.0) * 0.55;
+
+            float alpha = (core + glow) * uAlphaScale;
+            if(alpha < 0.015) discard;
+
+            vec3 col = vColor + core * uCoreWhite;
+            gl_FragColor = vec4(col, alpha);
+          }
+        `,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthTest: false,
+        depthWrite: false
+      });
+    }
+
+    function clearExisting(){
+      if(flowerPoints){
+        scene.remove(flowerPoints);
+        flowerPoints.geometry.dispose();
+        flowerPoints.material.dispose();
+        flowerPoints = null;
+      }
+      if(leafPoints){
+        scene.remove(leafPoints);
+        leafPoints.geometry.dispose();
+        leafPoints.material.dispose();
+        leafPoints = null;
+      }
+      cancelAnimationFrame(animationId);
+      animationId = null;
+      flowerOriginal = leafOriginal = null;
+      flowerVel = leafVel = null;
+    }
+
+    function createFromImage(imageSrc){
+      const img = new Image();
+      img.onload = () => {
+        clearExisting();
+
+        const c = document.createElement('canvas');
+        const ctx = c.getContext('2d', { willReadFrequently:true });
+
+        const maxDim = SETTINGS.maxDim;
+        let w = img.width, h = img.height;
+        const ratio = Math.min(maxDim / w, maxDim / h);
+        w = Math.max(1, Math.floor(w * ratio));
+        h = Math.max(1, Math.floor(h * ratio));
+        c.width = w; c.height = h;
+        ctx.drawImage(img, 0, 0, w, h);
+        const data = ctx.getImageData(0,0,w,h).data;
+
+        // 视口适配：让花不会缩成一坨
+        const { viewH } = getViewSizeAtZ0();
+        const baseSpacing = 1.05; // 更密一点
+        const rawH = h * baseSpacing;
+        const fitScale = (viewH * SETTINGS.fitToView) / Math.max(1, rawH);
+
+        // 以花的包围盒估计半径 R（用来做花瓣曲面）
+        // 先粗略找出“非绿、非暗”的点来估计范围
+        let minX=1e9, minY=1e9, maxX=-1e9, maxY=-1e9;
+        for(let y=0; y<h; y+=2){
+          for(let x=0; x<w; x+=2){
+            const idx=(x+y*w)*4;
+            const r=data[idx], g=data[idx+1], b=data[idx+2], a=data[idx+3];
+            if(a < SETTINGS.alphaThreshold) continue;
+            if(r<SETTINGS.darkCutoff && g<SETTINGS.darkCutoff && b<SETTINGS.darkCutoff) continue;
+            const hsv = rgbToHsv(r,g,b);
+            const isGreen = (hsv.h >= SETTINGS.greenHueMin && hsv.h <= SETTINGS.greenHueMax && hsv.s >= SETTINGS.greenSatMin && hsv.v >= SETTINGS.greenValMin);
+            if(isGreen) continue;
+            minX=Math.min(minX,x); minY=Math.min(minY,y);
+            maxX=Math.max(maxX,x); maxY=Math.max(maxY,y);
+          }
+        }
+        if(minX>maxX){ minX=0; minY=0; maxX=w; maxY=h; } // 兜底
+        const cx = (minX+maxX)/2;
+        const cy = (minY+maxY)/2;
+        const estR = Math.max(24, Math.max(maxX-minX, maxY-minY) * 0.55) * baseSpacing * fitScale;
+
+        // ---------- 花：采样（非绿） + 分层Z曲面 ----------
+        const flowerPos = [];
+        const flowerCol = [];
+        const flowerSize = [];
+
+        // ---------- 叶：采样（绿）但只保留一片衬托 ----------
+        const leafPos = [];
+        const leafCol = [];
+        const leafSize = [];
+
+        // 采样步长：根据预算动态调整
+        // 花尽量多，叶子少且稀
+        const totalPx = w*h;
+        const flowerStride = totalPx > 220000 ? 2 : 1;
+        const leafStride = totalPx > 220000 ? 5 : 4;
+
+        // 为了更“写实清晰”：边缘加权密度（更容易选到边缘点）
+        // 用简单梯度近似：对比邻域亮度
+        function luminance(rr,gg,bb){ return (0.2126*rr + 0.7152*gg + 0.0722*bb)/255; }
+
+        let flowerCount = 0;
+        let leafCount = 0;
+
+        for(let y=0; y<h; y+=1){
+          for(let x=0; x<w; x+=1){
+            const idx=(x+y*w)*4;
+            const r=data[idx], g=data[idx+1], b=data[idx+2], a=data[idx+3];
+            if(a < SETTINGS.alphaThreshold) continue;
+            if(r<SETTINGS.darkCutoff && g<SETTINGS.darkCutoff && b<SETTINGS.darkCutoff) continue;
+
+            const hsv = rgbToHsv(r,g,b);
+            const isGreen = (hsv.h >= SETTINGS.greenHueMin && hsv.h <= SETTINGS.greenHueMax && hsv.s >= SETTINGS.greenSatMin && hsv.v >= SETTINGS.greenValMin);
+
+            // 基础平面坐标（以图像中心为基准）
+            let pX = (x - w/2) * baseSpacing;
+            let pY = -(y - h/2) * baseSpacing;
+            pX *= fitScale; pY *= fitScale;
+
+            if(isGreen){
+              // 叶子：稀疏抽样 + 只保留一部分 + 更暗更透明
+              if((x % leafStride)!==0 || (y % leafStride)!==0) continue;
+              if(Math.random() > SETTINGS.leafKeepRate) continue;
+              if(leafCount >= SETTINGS.maxLeafParticles) continue;
+
+              const z = -Math.abs((Math.random()) * SETTINGS.zDepthLeaf) - 160; // 更靠后
+              leafPos.push(pX*1.02, pY*1.02, z);
+
+              const rr = Math.min((r/255) * SETTINGS.colorBoostLeaf * SETTINGS.leafDarken, 1);
+              const gg = Math.min((g/255) * SETTINGS.colorBoostLeaf * SETTINGS.leafDarken, 1);
+              const bb = Math.min((b/255) * SETTINGS.colorBoostLeaf * SETTINGS.leafDarken, 1);
+              leafCol.push(rr, gg, bb);
+
+              const sz = SETTINGS.leafMinSize + Math.pow(Math.random(), 1.6) * (SETTINGS.leafMaxSize - SETTINGS.leafMinSize);
+              leafSize.push(sz);
+
+              leafCount++;
+            } else {
+              // 花：更密采样，但受预算限制
+              if((x % flowerStride)!==0 || (y % flowerStride)!==0) continue;
+              if(flowerCount >= SETTINGS.maxFlowerParticles) continue;
+
+              // 边缘加权：估计局部梯度，让轮廓更清晰
+              let edgeW = 1.0;
+              if(x>0 && x<w-1 && y>0 && y<h-1){
+                const iL = ((x-1)+y*w)*4, iR=((x+1)+y*w)*4, iU=(x+(y-1)*w)*4, iD=(x+(y+1)*w)*4;
+                const l = luminance(data[iL],data[iL+1],data[iL+2]);
+                const rrL = luminance(data[iR],data[iR+1],data[iR+2]);
+                const u = luminance(data[iU],data[iU+1],data[iU+2]);
+                const d = luminance(data[iD],data[iD+1],data[iD+2]);
+                const grad = Math.min(1, Math.abs(rrL-l) + Math.abs(d-u));
+                edgeW = 1.0 + grad * (SETTINGS.edgeBoost - 1.0);
+              }
+              // 让边缘点更容易被保留（写实轮廓）
+              if(Math.random() > (0.72 * edgeW)) continue;
+
+              // 分层：用半径把点分配给外/中/内层花瓣
+              const layer = allocatePetalLayer(pX - (cx - w/2)*baseSpacing*fitScale, pY - (-(cy - h/2)*baseSpacing*fitScale), estR);
+
+              // 花瓣曲面Z：结构化，不再随机一坨
+              const localX = pX - ( (cx - w/2) * baseSpacing * fitScale );
+              const localY = pY - ( -(cy - h/2) * baseSpacing * fitScale );
+              const zShape = buildFlowerZ(localX, localY, estR, layer);
+
+              // 在结构Z上叠一点点微噪（增加真实体积，但不糊）
+              const zNoise = (Math.random()-0.5) * 10.0;
+              const z = zShape * SETTINGS.zDepthFlower + zNoise;
+
+              flowerPos.push(pX, pY, z);
+
+              // 颜色：写实克制增强，保持粉白渐变
+              const rr = Math.min((r/255) * SETTINGS.colorBoostFlower, 1);
+              const gg = Math.min((g/255) * SETTINGS.colorBoostFlower, 1);
+              const bb = Math.min((b/255) * SETTINGS.colorBoostFlower, 1);
+              flowerCol.push(rr, gg, bb);
+
+              // 花瓣粒子：小为主，少量较大高光
+              const sz = SETTINGS.flowerMinSize + Math.pow(Math.random(), 3.1) * (SETTINGS.flowerMaxSize - SETTINGS.flowerMinSize);
+              flowerSize.push(sz);
+
+              flowerCount++;
+            }
+          }
+        }
+
+        // --- 叶子点云 ---
+        if(leafPos.length > 0){
+          const geo = new THREE.BufferGeometry();
+          geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(leafPos), 3));
+          geo.setAttribute('aColor', new THREE.BufferAttribute(new Float32Array(leafCol), 3));
+          geo.setAttribute('aSize', new THREE.BufferAttribute(new Float32Array(leafSize), 1));
+
+          const mat = makeShaderMaterial({ alphaScale: SETTINGS.leafAlpha, addCoreWhite: 0.10 });
+          leafPoints = new THREE.Points(geo, mat);
+          leafPoints.rotation.z = -0.10;
+          leafPoints.rotation.y = 0.16;
+          scene.add(leafPoints);
+
+          leafOriginal = new Float32Array(leafPos);
+          leafVel = new Float32Array(leafPos.length).fill(0);
+        }
+
+        // --- 花点云 ---
+        if(flowerPos.length > 0){
+          const geo = new THREE.BufferGeometry();
+          geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(flowerPos), 3));
+          geo.setAttribute('aColor', new THREE.BufferAttribute(new Float32Array(flowerCol), 3));
+          geo.setAttribute('aSize', new THREE.BufferAttribute(new Float32Array(flowerSize), 1));
+
+          const mat = makeShaderMaterial({ alphaScale: 1.0, addCoreWhite: 0.30 });
+          flowerPoints = new THREE.Points(geo, mat);
+          scene.add(flowerPoints);
+
+          flowerOriginal = new Float32Array(flowerPos);
+          flowerVel = new Float32Array(flowerPos.length).fill(0);
+        }
+
+        // UI
+        document.getElementById('ui-layer').style.opacity = '0';
+        document.getElementById('hint').style.opacity = '1';
+        setTimeout(() => { document.getElementById('ui-layer').style.display = 'none'; }, 800);
+
+        animate();
+      };
+
+      img.src = imageSrc;
+    }
+
+    function animate(){
+      animationId = requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      const t = clock.getElapsedTime();
+
+      // 更新 shader 时间
+      if(flowerPoints) flowerPoints.material.uniforms.uTime.value = t;
+      if(leafPoints) leafPoints.material.uniforms.uTime.value = t;
+
+      // 更新 花：小范围精致交互 + 写实回弹
+      if(flowerPoints && flowerOriginal && flowerVel){
+        const pos = flowerPoints.geometry.attributes.position.array;
+        const count = pos.length/3;
+
+        for(let i=0;i<count;i++){
+          const i3=i*3;
+
+          const pX = pos[i3], pY = pos[i3+1], pZ = pos[i3+2];
+          const oX = flowerOriginal[i3], oY = flowerOriginal[i3+1], oZ = flowerOriginal[i3+2];
+
+          // 距离中心：中心区域更“稳”，不要被搅散
+          const r = Math.min(1, Math.sqrt(oX*oX + oY*oY) / 420.0);
+          const centerStability = THREE.MathUtils.lerp(SETTINGS.centerProtect, 1.0, r);
+
+          const dx = targetMousePos.x - pX;
+          const dy = targetMousePos.y - pY;
+          const distSq = dx*dx + dy*dy;
+          const radiusSq = SETTINGS.repelRadius * SETTINGS.repelRadius;
+
+          if(distSq < radiusSq){
+            const dist = Math.sqrt(distSq);
+            const force = Math.pow((SETTINGS.repelRadius - dist) / SETTINGS.repelRadius, 2);
+            const ang = Math.atan2(dy, dx);
+
+            const f = force * SETTINGS.repelForce * centerStability;
+            flowerVel[i3]     -= Math.cos(ang) * f;
+            flowerVel[i3 + 1] -= Math.sin(ang) * f;
+            // Z 扰动更克制：写实不乱飞
+            flowerVel[i3 + 2] += (Math.random()-0.5) * f * 0.95;
+          }
+
+          // 回弹（写实、柔和）
+          flowerVel[i3]     += (oX - pX) * SETTINGS.springForce;
+          flowerVel[i3 + 1] += (oY - pY) * SETTINGS.springForce;
+          flowerVel[i3 + 2] += (oZ - pZ) * SETTINGS.springForce * 1.05;
+
+          // 摩擦
+          flowerVel[i3]     *= SETTINGS.friction;
+          flowerVel[i3 + 1] *= SETTINGS.friction;
+          flowerVel[i3 + 2] *= SETTINGS.friction;
+
+          pos[i3]     += flowerVel[i3];
+          pos[i3 + 1] += flowerVel[i3 + 1];
+          pos[i3 + 2] += flowerVel[i3 + 2];
+        }
+
+        flowerPoints.geometry.attributes.position.needsUpdate = true;
+
+        // 写实：极缓慢转动（有体积但不“宇宙旋涡”）
+        flowerPoints.rotation.y += delta * 0.012;
+        flowerPoints.rotation.z += delta * 0.006;
+      }
+
+      // 叶子：几乎不交互，只做轻微漂浮与极弱回弹（衬托）
+      if(leafPoints && leafOriginal && leafVel){
+        const pos = leafPoints.geometry.attributes.position.array;
+        const count = pos.length/3;
+        for(let i=0;i<count;i++){
+          const i3=i*3;
+          const pX = pos[i3], pY = pos[i3+1], pZ = pos[i3+2];
+          const oX = leafOriginal[i3], oY = leafOriginal[i3+1], oZ = leafOriginal[i3+2];
+
+          // 极弱回弹 + 轻微流动
+          leafVel[i3]     += (oX - pX) * (SETTINGS.springForce * 0.25);
+          leafVel[i3 + 1] += (oY - pY) * (SETTINGS.springForce * 0.25);
+          leafVel[i3 + 2] += (oZ - pZ) * (SETTINGS.springForce * 0.18);
+
+          leafVel[i3]     *= (SETTINGS.friction * 0.985);
+          leafVel[i3 + 1] *= (SETTINGS.friction * 0.985);
+          leafVel[i3 + 2] *= (SETTINGS.friction * 0.985);
+
+          pos[i3]     += leafVel[i3] + Math.sin(t*0.12 + oY*0.002) * 0.003;
+          pos[i3 + 1] += leafVel[i3 + 1] + Math.cos(t*0.10 + oX*0.002) * 0.003;
+          pos[i3 + 2] += leafVel[i3 + 2];
+        }
+        leafPoints.geometry.attributes.position.needsUpdate = true;
+
+        leafPoints.rotation.y -= delta * 0.003;
+        leafPoints.rotation.z += delta * 0.002;
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    function onWindowResize(){
+      camera.aspect = window.innerWidth/window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      if(flowerPoints) flowerPoints.material.uniforms.uPixelRatio.value = renderer.getPixelRatio();
+      if(leafPoints) leafPoints.material.uniforms.uPixelRatio.value = renderer.getPixelRatio();
+    }
+
+    function onMouseMove(e){
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      raycaster.ray.intersectPlane(plane, targetMousePos);
+    }
+
+    document.getElementById('imageInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if(!file) return;
+      const url = URL.createObjectURL(file);
+      createFromImage(url);
+    });
+
+    init3D();
+
+    // 你刚刚选的那张图：如果你想“打开页面就自动生成”，把下面这一行解注释，并把路径换成你的图片路径
+    // createFromImage('lotus.png');
+  </script>
+</body>
+</html>

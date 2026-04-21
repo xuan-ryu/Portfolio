@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="XUYUAN — UX Designer & Researcher. Interactive Design & Creative Development." />
+  <title>XUYUAN</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Murecho:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=ZCOOL+XiaoWei&family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/global.css" />
+  <link rel="stylesheet" href="css/page-home.css" />
+
+  <style>
+    /* ── Three.js hero (inline — positional context) ─────── */
+    @import url('https://fonts.googleapis.com/css2?family=Murecho:wght@300;400;500;600&display=swap');
+
+    #fixed-wrapper {
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 100vh;
+      z-index: 1;
+      will-change: transform;
+      transition: transform 0.1s linear;
+      pointer-events: none;
+    }
+    #canvas-container {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 1; opacity: 0;
+      transition: opacity 1.5s ease-in;
+      pointer-events: none;
+    }
+    #canvas-container canvas { pointer-events: auto; cursor: crosshair; display: block; }
+
+    #loading-tip {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 14px; color: #111; letter-spacing: 0.5em;
+      z-index: 9999; display: flex; flex-direction: column;
+      align-items: center; gap: 15px; user-select: none;
+      font-family: 'Cormorant Garamond', 'ZCOOL XiaoWei', 'Noto Serif SC', 'Songti SC', Georgia, serif; pointer-events: none;
+    }
+    .progress-bar { width: 180px; height: 1px; background: #EEE; position: relative; overflow: hidden; }
+    #progress-fill { position: absolute; left: 0; top: 0; height: 100%; width: 0%; background: #111; }
+    #loading-text  { font-family: 'Murecho', sans-serif; font-size: 10px; letter-spacing: 0.25em; color: #666; margin-top: 2px; }
+
+    .ui {
+      position: absolute; inset: 0; z-index: 6; color: #111;
+      pointer-events: none; transition: opacity 0.1s linear; will-change: opacity;
+    }
+    .topbar {
+      position: absolute; top: 32px; left: 6vw; right: 6vw;
+      display: flex; align-items: center; justify-content: space-between;
+      font-family: 'Murecho', sans-serif; pointer-events: auto;
+    }
+    .brandmark { font-size: 12px; letter-spacing: 0.15em; font-weight: 500; text-transform: uppercase; }
+    .hero-nav   { display: flex; gap: 32px; font-size: 11px; letter-spacing: 0.1em; }
+    .hero-nav a { color: #111; text-decoration: none; opacity: 0.6; transition: opacity 0.3s ease; }
+    .hero-nav a:hover { opacity: 1; }
+
+    .hero-copy {
+      position: absolute; left: 6vw; top: 50%;
+      transform: translateY(-50%); max-width: 520px; pointer-events: none;
+    }
+    .hero-copy h1 {
+      font-family: 'Cormorant Garamond', 'ZCOOL XiaoWei', 'Noto Serif SC', 'Songti SC', Georgia, serif;
+      font-size: clamp(48px, 6vw, 82px);
+      letter-spacing: 0.06em; font-weight: 500; margin: 0 0 20px 0;
+      line-height: 1; display: flex; flex-wrap: wrap; gap: 16px; align-items: baseline;
+    }
+    .hero-copy h1 .w {
+      display: inline-block; opacity: 0; transform: translate3d(0, 10px, 0);
+      filter: blur(2px);
+      animation: wordIn 1.05s cubic-bezier(.2,.9,.2,1) forwards;
+      will-change: opacity, transform, filter;
+    }
+    .hero-copy h1 .w:nth-child(1) { animation-delay: 0.10s; }
+    .hero-copy h1 .w:nth-child(2) { animation-delay: 0.55s; }
+    .hero-copy h1 .w:nth-child(3) { animation-delay: 1.00s; }
+    @keyframes wordIn {
+      0%   { opacity: 0; transform: translate3d(0, 12px, 0); filter: blur(3px); }
+      65%  { opacity: .95; filter: blur(0); }
+      100% { opacity: 1; transform: translate3d(0, 0, 0); filter: blur(0); }
+    }
+    .hero-copy .sub {
+      font-family: 'Murecho', sans-serif; font-size: 13px; color: #666;
+      letter-spacing: 0.03em; line-height: 1.8; max-width: 440px; font-weight: 300;
+    }
+
+    .brand-corner {
+      position: absolute; top: 48px; right: 6vw;
+      text-align: right; pointer-events: none;
+    }
+    .brand-corner .zh { font-family: 'Cormorant Garamond', 'ZCOOL XiaoWei', 'Noto Serif SC', 'Songti SC', Georgia, serif; font-size: clamp(20px, 2.5vw, 36px); font-weight: 500; letter-spacing: 0.4em; }
+    .brand-corner .en { font-family: 'Murecho', sans-serif; font-size: 9px; letter-spacing: 0.25em; text-transform: uppercase; color: #888; margin-top: 10px; }
+
+    .side-text {
+      position: absolute; top: 50%; right: 6vw;
+      transform: translateY(-50%); writing-mode: vertical-rl;
+      letter-spacing: 1.2em; font-weight: 400; pointer-events: none;
+      opacity: 0.8; font-family: 'Cormorant Garamond', 'ZCOOL XiaoWei', 'Noto Serif SC', 'Songti SC', Georgia, serif; font-size: 14px;
+    }
+    .hint {
+      position: absolute; left: 6vw; bottom: 32px;
+      font-family: 'Murecho', sans-serif; font-size: 10px;
+      letter-spacing: 0.2em; color: #888; pointer-events: none;
+      user-select: none; display: flex; align-items: center; gap: 12px;
+    }
+    .hint::after { content: ''; display: block; width: 40px; height: 1px; background: #888; opacity: 0.5; }
+
+    .scroll-spacer { position: relative; height: 200vh; z-index: 0; }
+    #black-page {
+      position: absolute; top: 100vh; left: 0; width: 100%; min-height: 100vh;
+      z-index: 10; display: flex; flex-direction: column;
+      justify-content: center; align-items: center; color: #F5F5F5;
+      opacity: 0; pointer-events: none;
+    }
+    #black-page.active { pointer-events: auto; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .hero-copy h1 .w { animation: none; opacity: 1; transform: none; filter: none; }
+    }
+
+    /* ── Content sections (below hero) ─────────────────── */
+    #page-content {
+      position: relative;
+      z-index: 20;
+      background: #ffffff;
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     THREE.JS HERO (fixed, scroll-driven)
+════════════════════════════════════════════════════════ -->
+<div id="fixed-wrapper">
+  <div id="loading-tip">
+    <div>疏 朗 有 致</div>
+    <div class="progress-bar"><div id="progress-fill"></div></div>
+    <div id="loading-text">0%</div>
+  </div>
+  <div id="canvas-container"></div>
+  <div class="ui">
+    <div class="topbar">
+      <div class="brandmark">XUYUAN<span style="opacity:.5;margin-left:4px;">©</span></div>
+      <nav class="hero-nav">
+        <a href="work/">work</a>
+        <a href="about/">about</a>
+        <a href="contact/">contact</a>
+      </nav>
+    </div>
+    <div class="hero-copy">
+      <h1 aria-label="Hello, 你好, こんにちは">
+        <span class="w">Hello,</span><span class="w">你好,</span><span class="w">こんにちは</span>
+      </h1>
+      <p class="sub">Interactive Design &amp; Creative Development.<br/>
+      Crafting digital experiences with an oriental aesthetic and modern engineering.</p>
+    </div>
+    <div class="brand-corner">
+      <div class="zh">气韵生动</div>
+      <div class="en">Foreground Bank &amp; Distant Peaks · Mist · Birds · Moss</div>
+    </div>
+    <div class="side-text">会 当 凌 绝 顶</div>
+    <div class="hint">向下滚动 / Scroll to explore</div>
+  </div>
+</div>
+
+<!-- Scroll-spacer drives the ink animation (200vh) -->
+<div class="scroll-spacer">
+  <div id="black-page">
+    <h2 style="font-family:'Cormorant Garamond','ZCOOL XiaoWei','Noto Serif SC','Songti SC',Georgia,serif;font-size:32px;letter-spacing:0.3em;margin-bottom:24px;font-weight:500;">深 邃</h2>
+    <p style="font-family:'Inter',sans-serif;font-size:13px;letter-spacing:0.1em;color:#888;max-width:450px;text-align:center;line-height:2;">
+      当数字水墨褪去，我们在黑暗中聚焦设计的本质。<br>Scroll to enter.
+    </p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PAGE CONTENT (white sections below hero)
+════════════════════════════════════════════════════════ -->
+<div id="page-content">
+
+  <!-- Sticky nav for content sections -->
+  <nav class="content-nav" role="navigation" aria-label="Primary navigation">
+    <div class="content-nav-inner">
+      <a href="index.html" class="nav-logo">XUYUAN</a>
+      <div class="nav-links">
+        <a href="work/">work</a>
+        <a href="about/">about</a>
+        <a href="contact/">contact</a>
+      </div>
+      <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+  <div class="nav-drawer" aria-hidden="true">
+    <a href="work/">work</a>
+    <a href="about/">about</a>
+    <a href="contact/">contact</a>
+  </div>
+
+  <!-- ── Featured Projects ──────────────────────────────── -->
+  <section id="featured" class="section featured-section">
+    <div class="container">
+      <div class="section-intro-row section-intro">
+        <div>
+          <p class="label" data-fade>Selected Work</p>
+          <h2 data-fade>Featured projects</h2>
+        </div>
+        <a href="work/" class="text-link" data-fade>View all projects</a>
+      </div>
+
+      <div class="featured-grid">
+
+        <a href="work/froghire-ai.html" class="project-card" data-fade>
+          <div class="project-cover cover-froghire placeholder">
+            <span class="cover-label">FrogHire.ai</span>
+          </div>
+          <div class="project-body">
+            <div class="project-tags">
+              <span class="pill">UX Design</span>
+              <span class="pill">Research</span>
+              <span class="pill">AI</span>
+            </div>
+            <h3 class="project-title">FrogHire.ai</h3>
+            <p class="project-oneliner">Redesigning the AI-powered hiring experience for early-career talent — making algorithmic screening feel fair, transparent, and human.</p>
+            <span class="text-link" style="margin-top:8px;">View project</span>
+          </div>
+        </a>
+
+        <a href="work/roper-center.html" class="project-card" data-fade>
+          <div class="project-cover cover-roper placeholder">
+            <span class="cover-label">Roper Center</span>
+          </div>
+          <div class="project-body">
+            <div class="project-tags">
+              <span class="pill">UX Design</span>
+              <span class="pill">Data Viz</span>
+            </div>
+            <h3 class="project-title">Roper Center</h3>
+            <p class="project-oneliner">Redesigning public opinion data discovery for researchers and the general public.</p>
+            <span class="text-link" style="margin-top:8px;">View project</span>
+          </div>
+        </a>
+
+        <a href="work/vr-monarch-butterfly.html" class="project-card" data-fade>
+          <div class="project-cover cover-vr-monarch placeholder">
+            <span class="cover-label">VR Monarch Butterfly</span>
+          </div>
+          <div class="project-body">
+            <div class="project-tags">
+              <span class="pill">VR Design</span>
+              <span class="pill">Unity</span>
+            </div>
+            <h3 class="project-title">VR Monarch Butterfly</h3>
+            <p class="project-oneliner">An immersive VR education experience tracing the monarch butterfly migration through embodied perspective-taking.</p>
+            <span class="text-link" style="margin-top:8px;">View project</span>
+          </div>
+        </a>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ── My Value ───────────────────────────────────────── -->
+  <section id="value" class="section value-section">
+    <div class="container">
+      <div class="section-intro" data-fade>
+        <p class="label">My Value</p>
+        <h2>How I work</h2>
+      </div>
+      <div class="grid-divider value-grid">
+        <div class="value-cell" data-fade>
+          <div class="value-icon">🔥</div>
+          <h3>Firefighter</h3>
+          <p>I move fast when it matters. When projects hit turbulence, I find clarity under pressure — turning constraint into creative momentum. I step toward the hard problems, not away from them.</p>
+        </div>
+        <div class="value-cell" data-fade>
+          <div class="value-icon">🦉</div>
+          <h3>Owl</h3>
+          <p>I observe before I act. Deep research and careful synthesis are my foundation. I question surface assumptions, surface what's hidden in the data, and ask the question nobody thought to ask.</p>
+        </div>
+        <div class="value-cell" data-fade>
+          <div class="value-icon">🌳</div>
+          <h3>Tree</h3>
+          <p>I build for the long run. Strong roots in research and relationships. Adaptable above ground — growing in whichever direction the work genuinely needs, not just what's comfortable.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Testimonials ───────────────────────────────────── -->
+  <section id="quotes" class="section quotes-section">
+    <div class="container">
+      <p class="label" style="margin-bottom:40px;" data-fade>What people say</p>
+      <div class="grid-divider quotes-grid">
+        <div class="quote-cell" data-fade>
+          <p class="quote-text">XUYUAN brings a rare combination of empathy and precision to every project. Their ability to synthesise user research into actionable design decisions is exceptional.</p>
+          <div class="quote-author">
+            <strong>Jiangning Lian</strong>
+            <span>Senior Product Designer</span>
+          </div>
+        </div>
+        <div class="quote-cell" data-fade>
+          <p class="quote-text">Working with XUYUAN transformed our team's design process. They asked questions that reshaped how we understood our own users — and the final product showed it.</p>
+          <div class="quote-author">
+            <strong>Minna Wang</strong>
+            <span>UX Research Lead</span>
+          </div>
+        </div>
+        <div class="quote-cell" data-fade>
+          <p class="quote-text">XUYUAN's research instincts are exceptional. They consistently surface insights that shift a project's direction in a meaningful way — always asking the right questions.</p>
+          <div class="quote-author">
+            <strong>Yu-chi Chang</strong>
+            <span>HCI Faculty, Cornell</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CTA ────────────────────────────────────────────── -->
+  <section id="cta" class="section cta-section">
+    <div class="container">
+      <h2 data-fade>LET'S WORK<br>TOGETHER</h2>
+      <a href="contact/" class="btn" data-fade>get in touch</a>
+    </div>
+  </section>
+
+  <!-- ── Footer ─────────────────────────────────────────── -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-left">
+        <div class="footer-logo">XUYUAN</div>
+        <p class="footer-copy">© 2024 XUYUAN. All rights reserved.</p>
+      </div>
+      <nav class="footer-nav" aria-label="Footer navigation">
+        <a href="work/">work</a>
+        <a href="about/">about</a>
+        <a href="#value">my value</a>
+        <a href="contact/">contact</a>
+      </nav>
+      <div class="footer-social">
+        <a href="https://www.linkedin.com/" rel="noopener" target="_blank">linkedin</a>
+        <a href="https://www.instagram.com/" rel="noopener" target="_blank">instagram</a>
+      </div>
+    </div>
+  </footer>
+
+</div><!-- /#page-content -->
+
+
+<!-- ══════════════════════════════════════════════════════
+     THREE.JS ENGINE (from Home-hero.html, scroll-driven)
+════════════════════════════════════════════════════════ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+  'use strict';
+  let scrollProgress = 0;
+  let isSceneVisible = true;
+  const wrapper  = document.getElementById('fixed-wrapper');
+  const uiLayer  = document.querySelector('.ui');
+  const blackPage = document.getElementById('black-page');
+  const body     = document.body;
+
+  window.addEventListener('scroll', () => {
+    const progress = Math.min(window.scrollY / window.innerHeight, 1);
+    scrollProgress = progress;
+    wrapper.style.transform = `translate3d(0,${progress * 80}px,0)`;
+    if (uiLayer) uiLayer.style.opacity = 1 - progress * 1.5;
+    if (progress > 0.4) {
+      body.style.backgroundColor = '#0A0A0A';
+      blackPage.style.opacity = (progress - 0.4) * 2;
+      blackPage.classList.add('active');
+    } else {
+      body.style.backgroundColor = '#FFFFFF';
+      blackPage.style.opacity = 0;
+      blackPage.classList.remove('active');
+    }
+    isSceneVisible = progress < 0.99;
+    if (typeof mountainMat !== 'undefined') mountainMat.uniforms.uScroll.value = progress;
+    if (typeof birdMesh   !== 'undefined') birdMesh.material.uniforms.uScroll.value = progress;
+  }, { passive: true });
+
+  /* ── Shaders ─────────────────────────────────────────── */
+  const mountainVert = `
+    uniform float uTime; uniform float uScroll;
+    attribute float aSize; attribute float aAlpha; varying float vAlpha;
+    void main() {
+      vec3 pos = position;
+      float phase = fract(sin(dot(pos.xz,vec2(12.9898,78.233)))*43758.5453)*6.2831;
+      float twinkle = 0.6 + 0.8*sin(uTime*2.0+phase);
+      pos.y += sin(uTime*0.35+pos.x*0.008)*0.5;
+      vec4 originalWorldPos = modelMatrix*vec4(pos,1.0);
+      float valleyMask = smoothstep(100.0,-200.0,originalWorldPos.z);
+      float wave = sin(originalWorldPos.x*0.002+uTime*0.5)*cos(originalWorldPos.z*0.002)*1000.0;
+      float seaLevel = 100.0+wave;
+      float bottomFade = smoothstep(seaLevel-60.0,seaLevel+120.0,originalWorldPos.y);
+      float s = clamp((uScroll-0.1)*1.25,0.0,1.0);
+      float easeScroll = s*s*s;
+      float dropFactor = 1.0+fract(sin(dot(pos.xz,vec2(12.9898,78.233)))*43758.5453)*2.0;
+      pos.y -= easeScroll*2500.0*dropFactor;
+      pos.x += sin(pos.y*0.01+uTime)*easeScroll*500.0;
+      pos.z += cos(pos.x*0.01+uTime)*easeScroll*500.0;
+      vec4 worldPos = modelMatrix*vec4(pos,1.0);
+      vec4 mvPosition = viewMatrix*worldPos;
+      gl_Position = projectionMatrix*mvPosition;
+      float size = aSize*(1000.0/-mvPosition.z);
+      float inkExpansion = 1.0+easeScroll*10.0;
+      float currentTwinkle = mix(twinkle,1.0,s);
+      gl_PointSize = clamp(size*(0.8+0.2*currentTwinkle)*inkExpansion,1.0,150.0);
+      vAlpha = aAlpha*mix(1.0,bottomFade,valleyMask)*currentTwinkle;
+      vAlpha *= (1.0-smoothstep(0.85,1.0,uScroll));
+    }
+  `;
+  const mountainFrag = `
+    uniform vec3 uColor; uniform float uScroll; varying float vAlpha;
+    void main(){
+      float d = distance(gl_PointCoord,vec2(0.5));
+      float s = clamp((uScroll-0.1)*1.25,0.0,1.0);
+      float core = mix(0.1,0.45,s*s);
+      float shape = smoothstep(0.5,core,d);
+      float a = vAlpha*shape;
+      if(a<0.01) discard;
+      vec3 targetColor = vec3(0.95,0.95,0.95);
+      vec3 finalColor = mix(uColor,targetColor,smoothstep(0.2,0.8,uScroll));
+      gl_FragColor = vec4(finalColor,a);
+    }
+  `;
+  const birdVert = `
+    attribute float aSize; uniform float uTime; uniform float uScroll; varying float vDepth;
+    void main(){
+      vec3 pos = position;
+      pos.y += sin(uTime*3.0+pos.x*0.05)*8.0;
+      vec4 originalMv = modelViewMatrix*vec4(pos,1.0);
+      vDepth = smoothstep(-2500.0,-500.0,originalMv.z);
+      float s = clamp((uScroll-0.1)*1.25,0.0,1.0);
+      float easeScroll = s*s*s;
+      float dropFactor = 1.0+fract(sin(dot(pos.xz,vec2(12.9898,78.233)))*43758.5453)*3.0;
+      pos.y -= easeScroll*3500.0*dropFactor;
+      pos.x += sin(pos.y*0.05)*easeScroll*400.0;
+      vec4 mvPosition = modelViewMatrix*vec4(pos,1.0);
+      gl_Position = projectionMatrix*mvPosition;
+      float size = aSize*(1000.0/-mvPosition.z);
+      float inkExpansion = 1.0+easeScroll*12.0;
+      gl_PointSize = size*inkExpansion;
+    }
+  `;
+  const birdFrag = `
+    uniform vec3 uColor; uniform float uScroll; varying float vDepth;
+    void main(){
+      vec2 uv = gl_PointCoord-vec2(0.5);
+      float v = abs(uv.x*1.5)+uv.y*0.8;
+      float s = clamp((uScroll-0.1)*1.25,0.0,1.0);
+      float shapeNormal = smoothstep(0.4,0.05,abs(v-0.1));
+      float shapeMelt   = smoothstep(0.5,0.1,length(uv));
+      float shape = mix(shapeNormal,shapeMelt,smoothstep(0.0,0.4,s));
+      if(shape<0.01) discard;
+      vec3 targetColor = vec3(0.9,0.9,0.95);
+      vec3 finalColor = mix(uColor,targetColor,smoothstep(0.2,0.8,uScroll));
+      float alphaFade = 1.0-smoothstep(0.85,1.0,uScroll);
+      gl_FragColor = vec4(finalColor,shape*mix(0.2,0.9,vDepth)*alphaFade);
+    }
+  `;
+
+  /* ── Terrain math ─────────────────────────────────────── */
+  function hash(n){ return Math.abs(Math.sin(n)*10000.0)%1.0; }
+  function mix(a,b,t){ return a*(1-t)+b*t; }
+  function clamp(x,a,b){ return Math.max(a,Math.min(b,x)); }
+  function smoothstep(e0,e1,x){ let t=clamp((x-e0)/(e1-e0),0,1); return t*t*(3-2*t); }
+  function noise2D(x,z){ const ix=Math.floor(x),iz=Math.floor(z),fx=x-ix,fz=z-iz,ux=fx*fx*(3-2*fx); return mix(mix(hash(ix+iz*57),hash(ix+1+iz*57),ux),mix(hash(ix+(iz+1)*57),hash(ix+1+(iz+1)*57),ux),fz); }
+  function fbm(x,z,oct=5){ let v=0,a=0.5; for(let i=0;i<oct;i++){v+=a*noise2D(x,z);x=x*2.05+100;z=z*2.25+100;a*=0.5;} return v; }
+  function ridge1D(x){ let n=fbm(x*0.0012,10,5),r=1-Math.abs(n-0.5)*2; r=Math.pow(Math.max(0,r),2.2); return r*smoothstep(0.25,0.75,fbm(x*0.004,200,3)); }
+  function bandMask(z,c,w){ let d=Math.abs(z-c)/w; return Math.pow(Math.max(0,1-d),2); }
+  function centralMistFactor(x){ return 1-Math.exp(-Math.pow(x/520,2)); }
+
+  function getTerrainData(x,z){
+    const fg=bandMask(z,1000,350),near=bandMask(z,220,460),mid=bandMask(z,-160,560),far=bandMask(z,-720,720);
+    let fgCut=smoothstep(100,1200,x),rightBank=Math.max(0,1-Math.pow((x-1400)/800,2))*380;
+    let sFg=ridge1D(x-900)*120+rightBank,sNear=ridge1D(x+80)*240,sMid=ridge1D(x-220)*720,sFar=ridge1D(x+520)*420;
+    let texN=fbm(x*0.003,z*0.004,4),texR=Math.pow(Math.max(0,1-Math.abs(texN-0.5)*2),2.8);
+    let h=fg*fgCut*(sFg+texR*120)+near*(sNear+texR*140)+mid*(sMid+texR*240)+far*(sFar+texR*120);
+    let cm=centralMistFactor(x),cmFinal=mix(cm,1,fg*0.8);
+    h*=(cmFinal*0.65+0.35); h-=(z*0.25);
+    let baseH=h-520; baseH+=fg*fgCut*350;
+    return{h:baseH,ridge:texR,cm,fg:fg*fgCut,far};
+  }
+
+  /* ── Birds ────────────────────────────────────────────── */
+  const FLOCK_COUNT=3,BIRDS_PER_FLOCK=15,TOTAL_BIRDS=FLOCK_COUNT*BIRDS_PER_FLOCK;
+  let birdGeo,birdMesh; const birdData=[];
+  function initBirds(scene){
+    const positions=new Float32Array(TOTAL_BIRDS*3),sizes=new Float32Array(TOTAL_BIRDS);
+    for(let f=0;f<FLOCK_COUNT;f++){
+      const flockZ=-500-Math.random()*1500,flockY=300+Math.random()*400,flockSpeed=0.8+Math.random()*0.5,startXOffset=f*2500+Math.random()*2000;
+      for(let b=0;b<BIRDS_PER_FLOCK;b++){
+        const i=f*BIRDS_PER_FLOCK+b;
+        sizes[i]=15+Math.random()*10;
+        birdData.push({baseX:-2500-startXOffset+b*(30+Math.random()*20),baseY:flockY+(Math.random()-0.5)*50,baseZ:flockZ+(Math.random()-0.5)*150*(b*0.1+1),speed:flockSpeed});
+      }
+    }
+    birdGeo=new THREE.BufferGeometry();
+    birdGeo.setAttribute('position',new THREE.BufferAttribute(positions,3).setUsage(THREE.DynamicDrawUsage));
+    birdGeo.setAttribute('aSize',new THREE.BufferAttribute(sizes,1));
+    const mat=new THREE.ShaderMaterial({vertexShader:birdVert,fragmentShader:birdFrag,uniforms:{uColor:{value:new THREE.Color(0x111111)},uTime:{value:0},uScroll:{value:0}},transparent:true,depthWrite:false});
+    birdMesh=new THREE.Points(birdGeo,mat); birdMesh.renderOrder=90; scene.add(birdMesh);
+  }
+  function updateBirds(dt,t){
+    if(!birdGeo)return;
+    const p=birdGeo.attributes.position.array;
+    for(let i=0;i<TOTAL_BIRDS;i++){const i3=i*3,d=birdData[i];d.baseX+=d.speed*dt*60;if(d.baseX>2500)d.baseX=-4500-Math.random()*3000;p[i3]=d.baseX;p[i3+1]=d.baseY;p[i3+2]=d.baseZ;}
+    birdGeo.attributes.position.needsUpdate=true; birdMesh.material.uniforms.uTime.value=t;
+  }
+
+  /* ── Main render ──────────────────────────────────────── */
+  /* ── Low-end device fallback ─────────────────────────── */
+  const isLowEnd = isMobile && (
+    (navigator.deviceMemory && navigator.deviceMemory <= 2) ||
+    (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2)
+  );
+  if(isLowEnd){
+    document.getElementById('loading-tip').style.display='none';
+    const el=document.getElementById('canvas-container');
+    el.style.cssText+='background:linear-gradient(170deg,#f9f7f4 0%,#ede9e3 60%,#d8d0c8 100%);opacity:1;';
+    el.innerHTML=`<svg viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice" style="width:100%;height:100%;position:absolute;top:0;left:0;opacity:0.55"><defs><filter id="inkblur"><feGaussianBlur stdDeviation="2.5"/></filter></defs><path d="M0,420 Q60,350 130,380 Q200,320 280,340 Q340,260 420,290 Q500,180 560,220 Q610,140 680,170 Q740,100 800,130 Q860,80 920,110 Q980,50 1040,80 Q1100,60 1200,90 L1200,600 L0,600 Z" fill="#2a2a2a" opacity="0.12" filter="url(#inkblur)"/><path d="M0,480 Q80,430 160,450 Q260,390 360,420 Q440,360 520,380 Q600,320 680,350 Q760,300 840,330 Q920,270 1000,300 Q1100,260 1200,280 L1200,600 L0,600 Z" fill="#1a1a1a" opacity="0.18" filter="url(#inkblur)"/><path d="M0,540 Q100,510 200,520 Q300,490 400,505 Q500,480 600,490 Q700,470 800,485 Q900,460 1000,475 Q1100,455 1200,465 L1200,600 L0,600 Z" fill="#111" opacity="0.25"/></svg>`;
+    return;
+  }
+
+  let scene,camera,renderer,mountainMat;
+  const container=document.getElementById('canvas-container');
+  async function init(){
+    scene=new THREE.Scene(); scene.fog=new THREE.FogExp2(0xFFFFFF,0.0001);
+    camera=new THREE.PerspectiveCamera(50,window.innerWidth/window.innerHeight,1,7000);
+    camera.position.set(0,260,2450);
+    const isMobile=window.innerWidth<=768;
+    renderer=new THREE.WebGLRenderer({antialias:false,alpha:true,powerPreference:'high-performance'});
+    renderer.setPixelRatio(Math.min(isMobile?0.75:1.5,window.devicePixelRatio||1));
+    renderer.setSize(window.innerWidth,window.innerHeight);
+    renderer.setClearColor(0xFFFFFF,0);
+    container.appendChild(renderer.domElement);
+
+    const positions=[],sizes=[],alphas=[];
+    const lx=-0.8,ly=0.4,lz=-0.4,extX=2600,minZ=-1200,maxZ=1200;
+    const cellSize=isMobile?28:13;
+    const density=isMobile?10:55,totalSteps=Math.floor(extX*2/cellSize);
+    let lastYield=performance.now();
+
+    for(let cx=-extX,step=0;cx<=extX;cx+=cellSize,step++){
+      for(let cz=minZ;cz<=maxZ;cz+=cellSize){
+        const tx=cx+cellSize/2,tz=cz+cellSize/2,t=getTerrainData(tx,tz);
+        if(t.h<-330&&t.fg<0.1)continue;
+        const eps=4,hx=getTerrainData(tx+eps,tz).h,hz=getTerrainData(tx,tz+eps).h;
+        let nx=-(hx-t.h)/eps,nz=-(hz-t.h)/eps,ny=1;
+        const nlen=Math.sqrt(nx*nx+ny*ny+nz*nz);nx/=nlen;ny/=nlen;nz/=nlen;
+        const dotLight=nx*lx+ny*ly+nz*lz;
+        let shadow=Math.pow(smoothstep(0.1,-0.6,dotLight),2.5),depth=smoothstep(minZ,maxZ,cz),count=0;
+        if(t.fg>0.05){
+          let veg=smoothstep(50,400,t.h)*smoothstep(0.85,0.98,ny);
+          let prob=shadow*1.3+Math.pow(t.ridge,3)*1.5+veg*3;
+          prob*=(1-smoothstep(-0.1,0.5,dotLight)*0.95);prob*=mix(0.1,1.4,depth);prob*=t.fg*1.5;
+          count=Math.min(Math.floor(prob*density*1.2),isMobile?6:45);
+          for(let p=0;p<count;p++){const px=cx+Math.random()*cellSize,pz=cz+Math.random()*cellSize;positions.push(px,getTerrainData(px,pz).h,pz);sizes.push(mix(1.5,4.5,depth)+shadow*2+veg*6);alphas.push(mix(0.1,0.9,depth*Math.min(prob,1.2)));}
+        } else {
+          let ff=smoothstep(-100,-1000,cz),isPeak=smoothstep(100,500,t.h);
+          let probS=Math.pow(t.ridge,3.4)*2+shadow*1.15;
+          probS*=(0.5+0.5*t.cm);probS*=mix(0.25,1.15,depth);
+          probS*=mix(0.55,1,smoothstep(-260,220,t.h));probS*=(1+ff*isPeak*2);
+          count=Math.min(Math.floor(probS*density),isMobile?3:18);
+          for(let p=0;p<count;p++){const sid=(Math.floor(tx/18)+Math.floor(tz/18)*911)*37.1+p*13.7,rx=hash(sid*1.3),rz=hash(sid*7.9),px=cx+rx*cellSize,pz=cz+rz*cellSize;positions.push(px,getTerrainData(px,pz).h,pz);let s=mix(1.2,3.6,depth)+shadow*2+Math.pow(t.ridge,2)*1.5;if(ff>0.1)s+=15*ff*isPeak;sizes.push(s);let a=mix(0.1,0.6,depth)*(0.55+0.45*t.cm)*mix(0.85,1,shadow);if(ff>0.1)a+=0.8*ff*isPeak;alphas.push(clamp(a,0.05,1));}
+        }
+      }
+      if(performance.now()-lastYield>26){
+        const pct=Math.floor(step/totalSteps*100);
+        document.getElementById('progress-fill').style.width=pct+'%';
+        document.getElementById('loading-text').innerText=pct+'%';
+        await new Promise(r=>setTimeout(r,0));lastYield=performance.now();
+      }
+    }
+
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+    geo.setAttribute('aSize',   new THREE.Float32BufferAttribute(sizes,1));
+    geo.setAttribute('aAlpha',  new THREE.Float32BufferAttribute(alphas,1));
+    positions.length=0;sizes.length=0;alphas.length=0;
+
+    mountainMat=new THREE.ShaderMaterial({vertexShader:mountainVert,fragmentShader:mountainFrag,uniforms:{uTime:{value:0},uColor:{value:new THREE.Color(0x2A2A2A)},uScroll:{value:0}},transparent:true,blending:THREE.NormalBlending,depthWrite:false});
+    scene.add(new THREE.Points(geo,mountainMat));
+    if(!isMobile) initBirds(scene);
+
+    document.getElementById('loading-tip').style.display='none';
+    container.style.opacity='1';
+
+    window.addEventListener('resize',()=>{
+      camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();
+      const mob=window.innerWidth<=768;
+      renderer.setPixelRatio(Math.min(mob?1:1.5,window.devicePixelRatio||1));
+      renderer.setSize(window.innerWidth,window.innerHeight);
+    },{passive:true});
+
+    const baseFog=new THREE.Color(0xFFFFFF),targetFog=new THREE.Color(0x000000);
+    const frameInterval=isMobile?1000/30:0;
+    let lastT=performance.now(),lastFrame=0;
+    function animate(ts){
+      requestAnimationFrame(animate);
+      if(!isSceneVisible)return;
+      if(isMobile&&ts-lastFrame<frameInterval)return;
+      lastFrame=ts;
+      const now=performance.now(),dt=Math.min(0.033,(now-lastT)/1000);lastT=now;const t=now*0.001;
+      mountainMat.uniforms.uTime.value=t;
+      if(!isMobile) updateBirds(dt,t);
+      mountainMat.uniforms.uScroll.value=scrollProgress;
+      if(birdMesh)birdMesh.material.uniforms.uScroll.value=scrollProgress;
+      scene.fog.color.copy(baseFog).lerp(targetFog,smoothstep(0.2,0.8,scrollProgress));
+      renderer.render(scene,camera);
+    }
+    animate(0);
+  }
+  if(!isLowEnd) init();
+})();
+</script>
+
+<script src="js/shared-nav.js"></script>
+</body>
+</html>

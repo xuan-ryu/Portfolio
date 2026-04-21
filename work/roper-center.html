@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Roper Center — UX Design case study by XUYUAN." />
+  <title>Roper Center — XUYUAN</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="../css/global.css" />
+  <link rel="stylesheet" href="../css/page-project.css" />
+</head>
+<body>
+
+<nav class="content-nav" role="navigation" aria-label="Primary navigation">
+  <div class="content-nav-inner">
+    <a href="../index.html" class="nav-logo">XUYUAN</a>
+    <div class="nav-links">
+      <a href="./index.html">work</a>
+      <a href="../about/">about</a>
+      <a href="../contact/">contact</a>
+    </div>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+<div class="nav-drawer" aria-hidden="true">
+  <a href="./index.html">work</a>
+  <a href="../about/">about</a>
+  <a href="../contact/">contact</a>
+</div>
+
+<main>
+  <div class="proj-hero cover-roper placeholder">
+    <span class="cover-label">Roper Center — Cover</span>
+  </div>
+
+  <div class="container">
+    <div class="proj-intro" data-fade>
+      <p class="label proj-eyebrow">UX Design · Data Visualization · Information Architecture</p>
+      <h1 class="proj-title">Roper Center</h1>
+      <p class="proj-oneliner">Redesigning public opinion data discovery — making decades of polling research accessible to both academics and the general public.</p>
+    </div>
+
+    <div class="proj-meta" data-fade>
+      <div class="meta-cell">
+        <div class="meta-label">Role</div>
+        <div class="meta-value">UX Designer<br>Information Architect</div>
+      </div>
+      <div class="meta-cell">
+        <div class="meta-label">Duration</div>
+        <div class="meta-value">2022.09 – 2023.05<br>8 months</div>
+      </div>
+      <div class="meta-cell">
+        <div class="meta-label">Team</div>
+        <div class="meta-value">2 Designers<br>1 Developer</div>
+      </div>
+      <div class="meta-cell">
+        <div class="meta-label">Tools</div>
+        <div class="meta-value">
+          <span class="pill">Figma</span>
+          <span class="pill">Miro</span>
+          <span class="pill">D3.js (proto)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="proj-layout">
+      <aside class="proj-sidebar" aria-label="Section navigation">
+        <nav>
+          <a href="#overview">Overview</a>
+          <a href="#problem">Problem</a>
+          <a href="#process">Process</a>
+          <a href="#solution">Solution</a>
+          <a href="#outcome">Outcome</a>
+          <a href="#reflection">Reflection</a>
+        </nav>
+      </aside>
+
+      <div class="proj-content">
+
+        <section class="proj-section" id="overview">
+          <h2 class="proj-section-title">Overview</h2>
+          <p>The Roper Center for Public Opinion Research at Cornell University holds one of the world's largest archives of public opinion data — over 22,000 datasets spanning 80+ years. But the platform that researchers, journalists, and citizens used to access this data was difficult to navigate, visually dated, and siloed by disciplinary assumptions.</p>
+          <p>The goal was to redesign the data discovery experience: make it faster to find relevant surveys, easier to understand what data exists, and more approachable for non-specialist users.</p>
+        </section>
+
+        <section class="proj-section" id="problem">
+          <h2 class="proj-section-title">Problem</h2>
+          <p>The existing platform was designed for expert researchers who already knew what they were looking for. It used technical metadata vocabulary (ICPSR codes, variable labels) as primary navigation, making it impenetrable for journalists, policy analysts, or curious citizens.</p>
+          <ul>
+            <li><strong>Search was keyword-only</strong> — no faceted filtering, no contextual browsing. Users needed to know the exact terminology used by 1980s data archivists.</li>
+            <li><strong>No data preview</strong> — users had to download a dataset to understand if it contained what they needed.</li>
+            <li><strong>No sense of scale</strong> — the richness of 80 years of data was completely hidden. There was no way to explore thematically or chronologically.</li>
+          </ul>
+          <div class="proj-img">
+            <span class="img-label">Heuristic evaluation — original interface pain points</span>
+          </div>
+        </section>
+
+        <section class="proj-section" id="process">
+          <h2 class="proj-section-title">Process</h2>
+
+          <h4>Stakeholder Research</h4>
+          <p>We identified three distinct user groups: academic researchers (power users), journalists (deadline-driven, need fast verification), and "curious citizens" (low expertise, high motivation). Each had fundamentally different mental models and task flows.</p>
+
+          <h4>Card Sorting & IA</h4>
+          <p>Open card sorting with 24 participants revealed that non-experts organized data by <em>topic</em> and <em>time period</em>, while experts organized by <em>methodology</em> and <em>sponsor organization</em>. This gap was fundamental — we needed an IA that served both without compromising either.</p>
+
+          <h4>Iterative Prototyping</h4>
+          <p>Three rounds of prototype testing with 8 participants each. Early prototypes tested the faceted search system; later rounds tested the dataset preview card and the "explore by topic" entry point. Key insight: journalists needed a "quick facts" summary above the fold; researchers needed raw metadata accessible but not dominant.</p>
+        </section>
+
+        <section class="proj-section" id="solution">
+          <h2 class="proj-section-title">Solution</h2>
+
+          <h4>Dual-Mode Discovery</h4>
+          <p>The redesigned homepage offers two entry points: a powerful faceted search for expert users and a visual "Explore by Topic" browser (Health, Economy, Foreign Policy, etc.) for casual users. Both paths lead to the same dataset library — the difference is how you get in.</p>
+
+          <h4>Dataset Preview Cards</h4>
+          <p>Instead of forcing download before evaluation, each dataset now shows a preview card: 3 sample questions, response distribution charts, key demographic breakdowns, and a plain-English summary of what the survey asked and when. Researchers can evaluate relevance in 30 seconds.</p>
+
+          <h4>Temporal Explorer</h4>
+          <p>A new "timeline" visualization shows how public opinion on major topics has shifted over 80 years. Users can brush a time range to filter datasets. This transforms the archive from a static repository into an active data story.</p>
+          <div class="proj-img">
+            <span class="img-label">Solution — Dataset preview card design</span>
+          </div>
+        </section>
+
+        <section class="proj-section" id="outcome">
+          <h2 class="proj-section-title">Outcome</h2>
+          <div class="stat-grid">
+            <div class="stat-cell">
+              <div class="stat-number">54%</div>
+              <div class="stat-desc">Reduction in time-to-first-dataset for new users</div>
+            </div>
+            <div class="stat-cell">
+              <div class="stat-number">3.2×</div>
+              <div class="stat-desc">More datasets previewed per session</div>
+            </div>
+            <div class="stat-cell">
+              <div class="stat-number">91%</div>
+              <div class="stat-desc">Task completion rate (up from 63%)</div>
+            </div>
+          </div>
+          <p style="margin-top:24px;">Designs were handed off to the Roper Center development team in May 2023. The IA and interaction patterns are currently in staged implementation.</p>
+        </section>
+
+        <section class="proj-section" id="reflection">
+          <h2 class="proj-section-title">Reflection</h2>
+          <p>The hardest design challenge was serving two users with opposite mental models in the same interface. My instinct was to build adaptive "expert mode" and "casual mode" switches, but testing showed that users don't want to choose a mode — they want the interface to read their intent.</p>
+          <p>The solution was to design information density to scale with query specificity: simple searches return readable summary cards; complex queries surface detailed metadata. The interface responds to the user rather than asking the user to configure it.</p>
+          <p>I'd also invest more in the "shareable link" use case next time. Journalists often want to link directly to a specific data point — building that into the architecture earlier would have been worth the effort.</p>
+        </section>
+
+        <nav class="proj-nav" aria-label="Project navigation">
+          <a href="froghire-ai.html" class="proj-nav-item">
+            <span class="proj-nav-label">← Previous</span>
+            <span class="proj-nav-title">FrogHire.ai</span>
+          </a>
+          <a href="hunger-1942.html" class="proj-nav-item next">
+            <span class="proj-nav-label">Next →</span>
+            <span class="proj-nav-title">Hunger 1942</span>
+          </a>
+        </nav>
+
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-left">
+      <div class="footer-logo">XUYUAN</div>
+      <p class="footer-copy">© 2024 XUYUAN. All rights reserved.</p>
+    </div>
+    <nav class="footer-nav">
+      <a href="./index.html">work</a>
+      <a href="../about/">about</a>
+      <a href="../contact/">contact</a>
+    </nav>
+    <div class="footer-social">
+      <a href="https://www.linkedin.com/" rel="noopener" target="_blank">linkedin</a>
+      <a href="https://www.instagram.com/" rel="noopener" target="_blank">instagram</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../js/shared-nav.js"></script>
+</body>
+</html>

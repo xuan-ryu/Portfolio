@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Hunger 1942 — Game Design case study by XUYUAN." />
+  <title>Hunger 1942 — XUYUAN</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="../css/global.css" />
+  <link rel="stylesheet" href="../css/page-project.css" />
+</head>
+<body>
+
+<nav class="content-nav" role="navigation" aria-label="Primary navigation">
+  <div class="content-nav-inner">
+    <a href="../index.html" class="nav-logo">XUYUAN</a>
+    <div class="nav-links">
+      <a href="./index.html">work</a>
+      <a href="../about/">about</a>
+      <a href="../contact/">contact</a>
+    </div>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+<div class="nav-drawer" aria-hidden="true">
+  <a href="./index.html">work</a>
+  <a href="../about/">about</a>
+  <a href="../contact/">contact</a>
+</div>
+
+<main>
+  <div class="proj-hero cover-hunger placeholder">
+    <span class="cover-label">Hunger 1942 — Cover</span>
+  </div>
+
+  <div class="container">
+    <div class="proj-intro" data-fade>
+      <p class="label proj-eyebrow">Game Design · Narrative UX · Historical Media · Unity</p>
+      <h1 class="proj-title">Hunger 1942</h1>
+      <p class="proj-oneliner">An interactive historical narrative experience commemorating the 1942 Henan famine — designed to foster empathy and memory through embodied gameplay mechanics.</p>
+    </div>
+
+    <div class="proj-meta" data-fade>
+      <div class="meta-cell">
+        <div class="meta-label">Role</div>
+        <div class="meta-value">Game Designer<br>UX Researcher</div>
+      </div>
+      <div class="meta-cell">
+        <div class="meta-label">Duration</div>
+        <div class="meta-value">2023.01 – 2023.08<br>7 months</div>
+      </div>
+      <div class="meta-cell">
+        <div class="meta-label">Team</div>
+        <div class="meta-value">3 Designers<br>2 Developers</div>
+      </div>
+      <div class="meta-cell">
+        <div class="meta-label">Tools</div>
+        <div class="meta-value">
+          <span class="pill">Unity</span>
+          <span class="pill">Figma</span>
+          <span class="pill">Procreate</span>
+          <span class="pill">Blender</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="proj-layout">
+      <aside class="proj-sidebar" aria-label="Section navigation">
+        <nav>
+          <a href="#overview">Overview</a>
+          <a href="#problem">Problem</a>
+          <a href="#process">Process</a>
+          <a href="#solution">Solution</a>
+          <a href="#outcome">Outcome</a>
+          <a href="#reflection">Reflection</a>
+        </nav>
+      </aside>
+
+      <div class="proj-content">
+
+        <section class="proj-section" id="overview">
+          <h2 class="proj-section-title">Overview</h2>
+          <p>The 1942 Henan famine killed an estimated 2–3 million people in central China during the Second Sino-Japanese War. Despite its scale, it remains largely absent from mainstream historical memory — overshadowed by the concurrent Pacific War and suppressed under decades of political sensitivity.</p>
+          <p>This project asks: can a game create the conditions for genuine historical empathy? Not passive sympathy, but an embodied understanding of the impossible decisions ordinary people faced.</p>
+        </section>
+
+        <section class="proj-section" id="problem">
+          <h2 class="proj-section-title">Problem</h2>
+          <p>Representing historical trauma in games is ethically fraught. The design challenge was not just "how do we make this engaging?" but "how do we make this respectful?" Several tensions had to be held simultaneously:</p>
+          <ul>
+            <li><strong>Engagement vs. exploitation:</strong> Famine mechanics can feel extractive — turning suffering into a resource-management puzzle.</li>
+            <li><strong>Clarity vs. complexity:</strong> Historical events have causes; games need clear feedback loops. How do we show systemic failure without oversimplifying?</li>
+            <li><strong>Agency vs. authenticity:</strong> Real people had almost no agency. A game that gives players too much agency falsifies history; too little agency makes it not a game.</li>
+          </ul>
+        </section>
+
+        <section class="proj-section" id="process">
+          <h2 class="proj-section-title">Process</h2>
+
+          <h4>Historical Research</h4>
+          <p>We reviewed Theodore White and Annalee Jacoby's primary reporting from 1943, oral history archives from Henan Province, and academic literature on famine game design ethics. We also consulted with a historian specializing in Republican-era China.</p>
+
+          <h4>Design Framework: Witness, Not Hero</h4>
+          <p>The key design decision: players are witnesses and participants, not heroes. The player character is an ordinary village official trying to help people survive within a system designed to fail them. There is no "winning" in the conventional sense.</p>
+
+          <h4>Mechanics Development</h4>
+          <p>Three mechanic prototypes were tested with 20 participants. The "resource allocation" prototype (most conventional game-like) created the most ethical discomfort — playtesters felt they were "scoring points" off suffering. The final mechanic — navigating narrative choice trees with no clear "good" options — created the most meaningful emotional responses.</p>
+          <div class="proj-img">
+            <span class="img-label">Playtesting session — narrative choice architecture</span>
+          </div>
+        </section>
+
+        <section class="proj-section" id="solution">
+          <h2 class="proj-section-title">Solution</h2>
+
+          <h4>Narrative Choice Architecture</h4>
+          <p>The game presents players with 12 major decision points — each based on documented historical events or dilemmas faced by real officials. Choices are deliberately constrained: there is rarely a good option, only less terrible ones. The consequences unfold slowly across the game's timeline.</p>
+
+          <h4>Visual Language</h4>
+          <p>Desaturated ink-wash aesthetics (drawing on Chinese shanshui painting traditions) convey the period without graphic depictions of suffering. The art direction was guided by a principle: represent absence, not presence. What is missing from the frame tells the story.</p>
+
+          <h4>Post-game Documentation Layer</h4>
+          <p>After completing the narrative, players access an archival layer — real photographs, news dispatches, and first-person testimonies linked to the choices they made. The game becomes an entry point to actual history, not a substitute for it.</p>
+        </section>
+
+        <section class="proj-section" id="outcome">
+          <h2 class="proj-section-title">Outcome</h2>
+          <div class="stat-grid">
+            <div class="stat-cell">
+              <div class="stat-number">87%</div>
+              <div class="stat-desc">Players reported learning "new and significant" historical information</div>
+            </div>
+            <div class="stat-cell">
+              <div class="stat-number">4.2×</div>
+              <div class="stat-desc">Higher post-play archival engagement vs. text-only control</div>
+            </div>
+            <div class="stat-cell">
+              <div class="stat-number">94%</div>
+              <div class="stat-desc">Players felt the experience was "respectful" of its subject matter</div>
+            </div>
+          </div>
+          <p style="margin-top:24px;">Exhibited at the Cornell Digital Humanities showcase (2023). The project has been submitted to two indie game festivals focused on historical and educational games.</p>
+        </section>
+
+        <section class="proj-section" id="reflection">
+          <h2 class="proj-section-title">Reflection</h2>
+          <p>This project permanently changed how I think about empathy in design. "Empathy" is often treated as a soft, automatic outcome of exposure. This project showed me that empathy requires friction — you have to put someone in a genuinely difficult position, not just show them something sad.</p>
+          <p>The hardest moment was our second playtesting round, when a participant said: "I kept trying to find the right answer, and eventually I realized there wasn't one. That was when I really understood." That was the moment I knew the design was working.</p>
+          <p>I'd continue to explore the archival layer — making the link between game choices and real historical documentation even tighter. The game should feel like it earned the right to show you those photographs.</p>
+        </section>
+
+        <nav class="proj-nav" aria-label="Project navigation">
+          <a href="roper-center.html" class="proj-nav-item">
+            <span class="proj-nav-label">← Previous</span>
+            <span class="proj-nav-title">Roper Center</span>
+          </a>
+          <a href="vr-monarch-butterfly.html" class="proj-nav-item next">
+            <span class="proj-nav-label">Next →</span>
+            <span class="proj-nav-title">VR Monarch Butterfly</span>
+          </a>
+        </nav>
+
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-left">
+      <div class="footer-logo">XUYUAN</div>
+      <p class="footer-copy">© 2024 XUYUAN. All rights reserved.</p>
+    </div>
+    <nav class="footer-nav">
+      <a href="./index.html">work</a>
+      <a href="../about/">about</a>
+      <a href="../contact/">contact</a>
+    </nav>
+    <div class="footer-social">
+      <a href="https://www.linkedin.com/" rel="noopener" target="_blank">linkedin</a>
+      <a href="https://www.instagram.com/" rel="noopener" target="_blank">instagram</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../js/shared-nav.js"></script>
+</body>
+</html>
