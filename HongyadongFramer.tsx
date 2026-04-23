@@ -189,8 +189,38 @@ export default function HongyadongFramer(props: Props) {
         const touchCapable = "ontouchstart" in window
         const cores = navigator.hardwareConcurrency || 2
         const mem = (navigator as any).deviceMemory || 4
+        const dpr = window.devicePixelRatio || 1
+        const motionQuery = window.matchMedia
+            ? window.matchMedia("(prefers-reduced-motion: reduce)")
+            : null
+        const reducedMotion = !!(motionQuery && motionQuery.matches)
+        const connection =
+            (navigator as any).connection ||
+            (navigator as any).mozConnection ||
+            (navigator as any).webkitConnection
+        const saveData = !!(connection && connection.saveData)
 
-        let tier = cores >= 8 && mem >= 4 ? 2 : cores >= 4 ? 1 : 0
+        const estimateMaxTier = (
+            width = window.innerWidth,
+            height = window.innerHeight
+        ) => {
+            if (saveData || reducedMotion) return 0
+
+            let nextTier = cores >= 10 && mem >= 8 ? 2 : cores >= 6 && mem >= 4 ? 1 : 0
+            const shortEdge = Math.min(width, height)
+            const area = Math.max(width * height, 1)
+
+            if (touchCapable) nextTier = Math.min(nextTier, 1)
+            if (shortEdge <= 480 || area <= 430000) nextTier = 0
+            if (dpr >= 2.2 && area >= 2560 * 1440) {
+                nextTier = Math.max(0, nextTier - 1)
+            }
+
+            return nextTier
+        }
+
+        let maxTier = estimateMaxTier()
+        let tier = maxTier
         let W = 0
         let H = 0
         let currentScrollPx = 0
@@ -204,35 +234,69 @@ export default function HongyadongFramer(props: Props) {
         let imageParticles: ImageParticle[] = []
         let motes: Mote[] = []
         let slowFrames = 0
+        let fastFrames = 0
         let lastNow = 0
         let copyVisible = false
         let titleReadyFrame = 0
 
         const TIER_CFG = [
             {
-                sampleLong: 200,
-                sampleLongMax: 260,
+                sampleLong: 170,
+                sampleLongMax: 220,
                 dprCap: 1,
                 glowOn: false,
+                glowOpacity: 0,
                 moteCount: 0,
+                sampleStep: 2,
+                hoverOn: false,
+                hoverRadius: 0,
+                hoverPush: 0,
+                spread: 10,
+                parallaxX: 0.004,
+                parallaxY: 0.08,
+                baseYOffset: 0.16,
+                igniteLift: 16,
+                glowThreshold: 1,
             },
             {
-                sampleLong: 340,
-                sampleLongMax: 500,
-                dprCap: 1.5,
+                sampleLong: 300,
+                sampleLongMax: 420,
+                dprCap: 1.25,
                 glowOn: true,
+                glowOpacity: 0.12,
+                moteCount: 12,
+                sampleStep: 2,
+                hoverOn: false,
+                hoverRadius: 84,
+                hoverPush: 20,
+                spread: 13,
+                parallaxX: 0.006,
+                parallaxY: 0.1,
+                baseYOffset: 0.17,
+                igniteLift: 18,
+                glowThreshold: 0.76,
+            },
+            {
+                sampleLong: 440,
+                sampleLongMax: 620,
+                dprCap: 1.75,
+                glowOn: true,
+                glowOpacity: 0.18,
                 moteCount: 24,
-            },
-            {
-                sampleLong: 500,
-                sampleLongMax: 680,
-                dprCap: 2,
-                glowOn: true,
-                moteCount: 40,
+                sampleStep: 1,
+                hoverOn: true,
+                hoverRadius: 110,
+                hoverPush: 34,
+                spread: 16,
+                parallaxX: 0.008,
+                parallaxY: 0.12,
+                baseYOffset: 0.18,
+                igniteLift: 22,
+                glowThreshold: 0.68,
             },
         ]
 
-        const COPY_REVEAL_THRESHOLD = 0.24
+        const COPY_REVEAL_THRESHOLD = reducedMotion ? 0.18 : 0.24
 
         const syncUIText = (progress: number) => {
             const textT = smoothstep(0.12, 0.48, progress)
@@ -287,8 +351,9 @@ export default function HongyadongFramer(props: Props) {
         }
 
         const buildMotes = () => {
+            const cfg = TIER_CFG[tier]
             motes = Array.from(
-                { length: TIER_CFG[tier].moteCount },
+                { length: cfg.moteCount },
                 (_, i): Mote => ({
                     x: hash(i * 3 + 1) * W,
                     y: hash(i * 3 + 2) * H,
@@ -304,7 +369,7 @@ export default function HongyadongFramer(props: Props) {
             const cfg = TIER_CFG[tier]
             const isMobile = W < 768 || touchCapable
             const baseLong = isMobile
-                ? Math.round(cfg.sampleLong * 0.68)
+                ? Math.round(cfg.sampleLong * (reducedMotion ? 0.58 : 0.72))
                 : cfg.sampleLong
 
             if (isMobile) return baseLong
@@ -399,8 +464,10 @@ export default function HongyadongFramer(props: Props) {
                 return
             }
 
-            for (let y = 0; y < sampleHeight; y += 1) {
-                for (let x = 0; x < sampleWidth; x += 1) {
+            const spacing = TIER_CFG[tier].sampleStep
+
+            for (let y = 0; y < sampleHeight; y += spacing) {
+                for (let x = 0; x < sampleWidth; x += spacing) {
                     const idx = (y * sampleWidth + x) * 4
                     const r = imageData[idx]
                     const g = imageData[idx + 1]
@@ -557,17 +624,25 @@ export default function HongyadongFramer(props: Props) {
             mx: number,
             my: number
         ) => {
+            const cfg = TIER_CFG[tier]
             const ignite = smoothstep(0.02, 0.68, drift)
-            const spread = smoothstep(0.12, 1, drift) * 16
+            const spread = smoothstep(0.12, 1, drift) * cfg.spread
             const colorSat = smoothstep(0.0, 0.5, drift)
-            const parallaxX = smoothY * 0.008
-            const parallaxY = smoothY * 0.12
-            const baseYOffset = H * 0.18
-            const HOVER_R = 110
+            const parallaxX = smoothY * cfg.parallaxX
+            const parallaxY = smoothY * cfg.parallaxY
+            const baseYOffset = H * cfg.baseYOffset
+            const HOVER_R = cfg.hoverRadius
             const HOVER_R2 = HOVER_R * HOVER_R
-            const MAX_PUSH = 38
+            const MAX_PUSH = cfg.hoverPush
+            const hoverEnabled =
+                cfg.hoverOn &&
+                !touchCapable &&
+                !reducedMotion &&
+                mx > -9000 &&
+                my > -9000
 
-            if (TIER_CFG[tier].glowOn) {
+            const useGlow = cfg.glowOn && drift > 0.08
+            if (useGlow) {
                 glowCtx.clearRect(0, 0, W, H)
             }
 
@@ -583,16 +658,18 @@ export default function HongyadongFramer(props: Props) {
                     p.oy +
                     baseYOffset -
                     parallaxY * (0.2 + p.z * 0.5) -
-                    ignite * (12 + p.z * 22.0)
+                    ignite * (cfg.igniteLift * 0.55 + p.z * cfg.igniteLift)
 
-                const dx = px - mx
-                const dy = py - my
-                const d2 = dx * dx + dy * dy
-                if (d2 < HOVER_R2 && d2 > 0.01) {
-                    const d = Math.sqrt(d2)
-                    const push = Math.pow(1 - d / HOVER_R, 2) * MAX_PUSH
-                    px += (dx / d) * push
-                    py += (dy / d) * push
+                if (hoverEnabled) {
+                    const dx = px - mx
+                    const dy = py - my
+                    const d2 = dx * dx + dy * dy
+                    if (d2 < HOVER_R2 && d2 > 0.01) {
+                        const d = Math.sqrt(d2)
+                        const push = Math.pow(1 - d / HOVER_R, 2) * MAX_PUSH
+                        px += (dx / d) * push
+                        py += (dy / d) * push
+                    }
                 }
 
                 if (px < -8 || px > W + 8 || py < -8 || py > H + 8) continue
@@ -613,7 +690,7 @@ export default function HongyadongFramer(props: Props) {
                 ctx.arc(px, py, radius, 0, Math.PI * 2)
                 ctx.fill()
 
-                if (TIER_CFG[tier].glowOn && p.luma > 0.68) {
+                if (useGlow && p.luma > cfg.glowThreshold) {
                     glowCtx.fillStyle = `rgba(${pr},${pg},${pb},${alpha * 0.3})`
                     glowCtx.beginPath()
                     glowCtx.arc(px, py, radius * 5, 0, Math.PI * 2)
@@ -625,6 +702,8 @@ export default function HongyadongFramer(props: Props) {
         const resize = () => {
             W = Math.max(rootEl.clientWidth, 1)
             H = Math.max(stageEl.getBoundingClientRect().height, 1)
+            maxTier = estimateMaxTier(W, H)
+            if (tier > maxTier) tier = maxTier
 
             const DPR = Math.min(
                 window.devicePixelRatio || 1,
@@ -643,14 +722,18 @@ export default function HongyadongFramer(props: Props) {
             glowCanvasEl.style.width = `${W}px`
             glowCanvasEl.style.height = `${H}px`
             glowCtx.setTransform(glowDPR, 0, 0, glowDPR, 0, 0)
-            glowCanvasEl.style.opacity = TIER_CFG[tier].glowOn ? "0.2" : "0"
+            glowCanvasEl.style.opacity = TIER_CFG[tier].glowOn
+                ? String(TIER_CFG[tier].glowOpacity)
+                : "0"
 
             buildMotes()
             buildImageParticles()
         }
 
         const applyTier = () => {
-            glowCanvasEl.style.opacity = TIER_CFG[tier].glowOn ? "0.2" : "0"
+            glowCanvasEl.style.opacity = TIER_CFG[tier].glowOn
+                ? String(TIER_CFG[tier].glowOpacity)
+                : "0"
             buildMotes()
             buildImageParticles()
         }
@@ -670,15 +753,25 @@ export default function HongyadongFramer(props: Props) {
             lastNow = now
 
             if (dt > 0 && dt < 1000) {
-                if (dt > 26 && tier > 0) {
+                if (dt > 28 && tier > 0) {
                     slowFrames += 1
-                    if (slowFrames > 90) {
+                    fastFrames = 0
+                    if (slowFrames > 45) {
                         tier -= 1
                         applyTier()
                         slowFrames = 0
                     }
+                } else if (dt < 17 && tier < maxTier) {
+                    fastFrames += 1
+                    slowFrames = Math.max(0, slowFrames - 2)
+                    if (fastFrames > 180) {
+                        tier += 1
+                        applyTier()
+                        fastFrames = 0
+                    }
                 } else {
                     slowFrames = Math.max(0, slowFrames - 1)
+                    fastFrames = Math.max(0, fastFrames - 1)
                 }
             }
 
@@ -689,7 +782,8 @@ export default function HongyadongFramer(props: Props) {
             }
             const drift = clamp(currentScrollPx / (maxScroll * 0.72), 0, 1)
 
-            smoothY += (currentScrollPx - smoothY) * 0.07
+            const scrollEase = reducedMotion ? 0.18 : 0.07
+            smoothY += (currentScrollPx - smoothY) * scrollEase
             smoothMX += (mouseX - smoothMX) * 0.12
             smoothMY += (mouseY - smoothMY) * 0.12
 
@@ -703,6 +797,7 @@ export default function HongyadongFramer(props: Props) {
         }
 
         const handlePointerMove = (event: MouseEvent | TouchEvent) => {
+            if (!TIER_CFG[tier].hoverOn || touchCapable || reducedMotion) return
             const point =
                 "touches" in event && event.touches.length > 0
                     ? event.touches[0]
@@ -733,10 +828,6 @@ export default function HongyadongFramer(props: Props) {
             }
         }
 
-        if ((touchCapable || W < 768) && tier > 1) {
-            tier = 1
-        }
-
         window.addEventListener("resize", handleResize)
         window.addEventListener("scroll", syncProgress, { passive: true })
         window.addEventListener("mousemove", handlePointerMove, {
@@ -755,6 +846,7 @@ export default function HongyadongFramer(props: Props) {
         })
 
         const start = () => {
+            tier = Math.min(tier, maxTier)
             resize()
             syncProgress()
             if (!rafId) {
@@ -806,6 +898,8 @@ export default function HongyadongFramer(props: Props) {
                     position: sticky;
                     top: 0;
                     height: 100vh;
+                    height: 100svh;
+                    height: 100dvh;
                     overflow: hidden;
                     isolation: isolate;
                     background: #fff;
@@ -855,7 +949,11 @@ export default function HongyadongFramer(props: Props) {
                     width: min(1280px, 100%);
                     height: 100%;
                     margin: 0 auto;
-                    padding: clamp(30px, 4.6vw, 72px);
+                    padding:
+                        calc(clamp(30px, 4.6vw, 72px) + env(safe-area-inset-top, 0px))
+                        calc(clamp(30px, 4.6vw, 72px) + env(safe-area-inset-right, 0px))
+                        calc(clamp(30px, 4.6vw, 72px) + env(safe-area-inset-bottom, 0px))
+                        calc(clamp(30px, 4.6vw, 72px) + env(safe-area-inset-left, 0px));
                     display: grid;
                     grid-template-rows: auto 1fr auto;
                     pointer-events: none;
@@ -902,9 +1000,9 @@ export default function HongyadongFramer(props: Props) {
                     font-size: clamp(82px, 12vw, 168px);
                     line-height: 0.88;
                     font-weight: 600;
-                    letter-spacing: 0.01em;
+                    letter-spacing: 0.015em;
                     color: rgba(0, 0, 0, 0.95);
-                    text-transform: uppercase;
+                    text-transform: none;
                 }
 
                 .hyf-title-line {
@@ -997,7 +1095,11 @@ export default function HongyadongFramer(props: Props) {
 
                 @media (max-width: 768px) {
                     .hyf-ui {
-                        padding: 24px 20px 28px;
+                        padding:
+                            calc(24px + env(safe-area-inset-top, 0px))
+                            calc(20px + env(safe-area-inset-right, 0px))
+                            calc(28px + env(safe-area-inset-bottom, 0px))
+                            calc(20px + env(safe-area-inset-left, 0px));
                     }
 
                     .hyf-hero {
@@ -1025,6 +1127,70 @@ export default function HongyadongFramer(props: Props) {
                     .hyf-bottom {
                         font-size: 11px;
                         letter-spacing: 0.14em;
+                    }
+                }
+
+                @media (max-height: 760px) {
+                    .hyf-ui {
+                        padding-top: max(22px, env(safe-area-inset-top, 0px));
+                    }
+
+                    .hyf-hero {
+                        max-width: min(820px, 82vw);
+                        padding-bottom: 28px;
+                    }
+
+                    .hyf-hero h1 {
+                        font-size: clamp(62px, 10vw, 128px);
+                    }
+
+                    .hyf-zh {
+                        margin-bottom: 14px;
+                    }
+
+                    .hyf-sub {
+                        max-width: 520px;
+                        font-size: clamp(14px, 1.3vw, 18px);
+                    }
+                }
+
+                @media (max-width: 900px) and (orientation: landscape) {
+                    .hyf-ui {
+                        padding:
+                            calc(18px + env(safe-area-inset-top, 0px))
+                            calc(18px + env(safe-area-inset-right, 0px))
+                            calc(22px + env(safe-area-inset-bottom, 0px))
+                            calc(18px + env(safe-area-inset-left, 0px));
+                    }
+
+                    .hyf-hero {
+                        max-width: min(72vw, 620px);
+                        align-self: end;
+                        padding-bottom: 16px;
+                    }
+
+                    .hyf-hero h1 {
+                        font-size: clamp(42px, 8vw, 78px);
+                    }
+
+                    .hyf-sub {
+                        max-width: 420px;
+                        font-size: 13px;
+                    }
+
+                    .hyf-top,
+                    .hyf-bottom {
+                        font-size: 10px;
+                    }
+                }
+
+                @media (prefers-reduced-motion: reduce) {
+                    .hyf-title-line,
+                    .hyf-reveal-word {
+                        opacity: 1;
+                        transform: none;
+                        filter: none;
+                        animation: none !important;
                     }
                 }
 
@@ -1117,8 +1283,8 @@ HongyadongFramer.defaultProps = {
     height: 2400,
     imageSrc: "hero.png",
     eyebrow: "Profile",
-    titleLine1: "ABOUT",
-    titleLine2: "ME",
+    titleLine1: "About",
+    titleLine2: "Me.",
     titleZh: "",
     subtitle:
         "Product designer & creative developer.\nI design for intuition - building at the intersection of humanities and creative engineering.",

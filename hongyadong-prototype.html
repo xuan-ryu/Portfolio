@@ -36,6 +36,7 @@
       position: sticky;
       top: 0;
       height: 100vh;
+      height: 100svh;
       height: 100dvh; /* collapses with mobile browser chrome */
       overflow: hidden;
       isolation: isolate;
@@ -89,7 +90,11 @@
       width: min(1280px, 100%);
       height: 100%;
       margin: 0 auto;
-      padding: clamp(30px, 4.6vw, 72px);
+      padding:
+        calc(clamp(30px, 4.6vw, 72px) + env(safe-area-inset-top, 0px))
+        calc(clamp(30px, 4.6vw, 72px) + env(safe-area-inset-right, 0px))
+        calc(clamp(30px, 4.6vw, 72px) + env(safe-area-inset-bottom, 0px))
+        calc(clamp(30px, 4.6vw, 72px) + env(safe-area-inset-left, 0px));
       display: grid;
       grid-template-rows: auto 1fr auto;
       pointer-events: none;
@@ -148,9 +153,9 @@
       font-size: clamp(82px, 12vw, 168px);
       line-height: 0.88;
       font-weight: 600;
-      letter-spacing: 0.01em;
+      letter-spacing: 0.015em;
       color: var(--ui-title-color);
-      text-transform: uppercase;
+      text-transform: none;
     }
 
     .hero h1 .title-line {
@@ -272,13 +277,56 @@
 
     @media (max-width: 768px) {
       body { min-height: 250vh; }
-      .ui { padding: 24px 20px 28px; }
+      .ui {
+        padding:
+          calc(24px + env(safe-area-inset-top, 0px))
+          calc(20px + env(safe-area-inset-right, 0px))
+          calc(28px + env(safe-area-inset-bottom, 0px))
+          calc(20px + env(safe-area-inset-left, 0px));
+      }
       .hero { max-width: 92vw; padding-bottom: 40px; }
       .hero h1 { font-size: clamp(54px, 15vw, 104px); }
       .hero .zh { font-size: 13px; letter-spacing: 0.14em; margin: 0 0 16px; }
       .hero .sub { font-size: 14px; max-width: 360px; line-height: 1.5; }
       .top, .bottom { font-size: 11px; letter-spacing: 0.14em; }
       .explain { display: none; }
+    }
+
+    @media (max-height: 760px) {
+      .ui { padding-top: max(22px, env(safe-area-inset-top, 0px)); }
+      .hero { max-width: min(820px, 82vw); padding-bottom: 28px; }
+      .hero h1 { font-size: clamp(62px, 10vw, 128px); }
+      .hero .zh { margin-bottom: 14px; }
+      .hero .sub { max-width: 520px; font-size: clamp(14px, 1.3vw, 18px); }
+    }
+
+    @media (max-width: 900px) and (orientation: landscape) {
+      body { min-height: 220vh; }
+      .ui {
+        padding:
+          calc(18px + env(safe-area-inset-top, 0px))
+          calc(18px + env(safe-area-inset-right, 0px))
+          calc(22px + env(safe-area-inset-bottom, 0px))
+          calc(18px + env(safe-area-inset-left, 0px));
+      }
+      .hero {
+        max-width: min(72vw, 620px);
+        align-self: end;
+        padding-bottom: 16px;
+      }
+      .hero h1 { font-size: clamp(42px, 8vw, 78px); }
+      .hero .sub { max-width: 420px; font-size: 13px; }
+      .top, .bottom { font-size: 10px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .hero h1 .title-line,
+      .reveal-word {
+        opacity: 1;
+        transform: none;
+        filter: none;
+        animation: none !important;
+      }
     }
 
     @media (max-width: 480px) {
@@ -315,7 +363,7 @@
       </div>
 
       <div class="hero">
-        <h1 id="heroTitle"><span class="title-line">ABOUT</span><span class="title-line">ME</span></h1>
+        <h1 id="heroTitle"><span class="title-line">About</span><span class="title-line">Me.</span></h1>
         <div class="zh">好雪片々，不落别處</div>
         <p class="sub reveal-copy" style="--reveal-delay: 120ms;">
           Product designer & creative developer.<br>
@@ -354,18 +402,91 @@
     // 1 = mid  (typical mobile, integrated GPU)
     // 2 = high (desktop, M-series, discrete GPU)
     const _cores  = navigator.hardwareConcurrency || 2;
-    const _mem    = navigator.deviceMemory || 4;      // GB; absent on Firefox/Safari
+    const _mem    = navigator.deviceMemory || 4;
     const _touch  = 'ontouchstart' in window;
-    let TIER = (_cores >= 8 && _mem >= 4) ? 2 : (_cores >= 4) ? 1 : 0;
+    const _dpr    = window.devicePixelRatio || 1;
+    const _motionQuery = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+    const _reducedMotion = !!(_motionQuery && _motionQuery.matches);
+    const _connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    const _saveData = !!(_connection && _connection.saveData);
+
+    function estimateMaxTier(width = window.innerWidth, height = window.innerHeight) {
+      if (_saveData || _reducedMotion) return 0;
+
+      let tier = (_cores >= 10 && _mem >= 8) ? 2 : (_cores >= 6 && _mem >= 4) ? 1 : 0;
+      const shortEdge = Math.min(width, height);
+      const area = Math.max(width * height, 1);
+
+      if (_touch) tier = Math.min(tier, 1);
+      if (shortEdge <= 480 || area <= 430000) tier = 0;
+      if (_dpr >= 2.2 && area >= 2560 * 1440) tier = Math.max(0, tier - 1);
+
+      return tier;
+    }
+
+    let MAX_TIER = estimateMaxTier();
+    let TIER = MAX_TIER;
 
     const TIER_CFG = [
-      { sampleLong: 200, sampleLongMax: 260, dprCap: 1,   glowOn: false, moteCount:  0 }, // low
-      { sampleLong: 340, sampleLongMax: 500, dprCap: 1.5, glowOn: true,  moteCount: 24 }, // mid
-      { sampleLong: 500, sampleLongMax: 680, dprCap: 2,   glowOn: true,  moteCount: 40 }, // high
+      {
+        sampleLong: 170,
+        sampleLongMax: 220,
+        dprCap: 1,
+        glowOn: false,
+        glowOpacity: 0,
+        moteCount: 0,
+        sampleStep: 2,
+        hoverOn: false,
+        hoverRadius: 0,
+        hoverPush: 0,
+        spread: 10,
+        parallaxX: 0.004,
+        parallaxY: 0.08,
+        baseYOffset: 0.16,
+        igniteLift: 16,
+        glowThreshold: 1,
+      },
+      {
+        sampleLong: 300,
+        sampleLongMax: 420,
+        dprCap: 1.25,
+        glowOn: true,
+        glowOpacity: 0.12,
+        moteCount: 12,
+        sampleStep: 2,
+        hoverOn: false,
+        hoverRadius: 84,
+        hoverPush: 20,
+        spread: 13,
+        parallaxX: 0.006,
+        parallaxY: 0.10,
+        baseYOffset: 0.17,
+        igniteLift: 18,
+        glowThreshold: 0.76,
+      },
+      {
+        sampleLong: 440,
+        sampleLongMax: 620,
+        dprCap: 1.75,
+        glowOn: true,
+        glowOpacity: 0.18,
+        moteCount: 24,
+        sampleStep: 1,
+        hoverOn: true,
+        hoverRadius: 110,
+        hoverPush: 34,
+        spread: 16,
+        parallaxX: 0.008,
+        parallaxY: 0.12,
+        baseYOffset: 0.18,
+        igniteLift: 22,
+        glowThreshold: 0.68,
+      },
     ];
 
     function applyTier() {
-      glowCanvas.style.opacity = TIER_CFG[TIER].glowOn ? "0.2" : "0";
+      const cfg = TIER_CFG[TIER];
+      glowCanvas.style.opacity = cfg.glowOn ? String(cfg.glowOpacity) : "0";
       buildMotes();
       buildImageParticles();
     }
@@ -377,7 +498,7 @@
     let rafId, resizeTimer;
     let imageParticles = [];
     let motes = [];
-    let slowFrames = 0, lastNow = 0;
+    let slowFrames = 0, fastFrames = 0, lastNow = 0;
 
     // ── helpers ──────────────────────────────────────────────────────
     function hash(n) {
@@ -449,7 +570,7 @@
       el.dataset.revealPrepared = "1";
     }
 
-    const COPY_REVEAL_THRESHOLD = 0.24;
+    const COPY_REVEAL_THRESHOLD = _reducedMotion ? 0.18 : 0.24;
 
     if (heroZhEl) {
       heroZhEl.classList.add("reveal-copy");
@@ -485,7 +606,8 @@
     syncUIText.copyVisible = false;
 
     function buildMotes() {
-      motes = Array.from({ length: TIER_CFG[TIER].moteCount }, (_, i) => ({
+      const cfg = TIER_CFG[TIER];
+      motes = Array.from({ length: cfg.moteCount }, (_, i) => ({
         x:    hash(i * 3 + 1) * W,
         y:    hash(i * 3 + 2) * H,
         vy:   0.18 + hash(i * 3 + 3) * 0.32,   // upward speed
@@ -499,7 +621,7 @@
       const cfg = TIER_CFG[TIER];
       const isMobile = W < 768 || _touch;
       const baseLong = isMobile
-        ? Math.round(cfg.sampleLong * 0.68)
+        ? Math.round(cfg.sampleLong * (_reducedMotion ? 0.58 : 0.72))
         : cfg.sampleLong;
 
       if (isMobile) return baseLong;
@@ -553,7 +675,7 @@
         console.warn("[particles] getImageData blocked:", e.message);
         return;
       }
-      const spacing = 1;
+      const spacing = TIER_CFG[TIER].sampleStep;
 
       for (let y = 0; y < sampleHeight; y += spacing) {
         for (let x = 0; x < sampleWidth; x += spacing) {
@@ -673,18 +795,20 @@
     }
 
     function drawImageParticles(time, drift, mx, my) {
+      const cfg = TIER_CFG[TIER];
       const ignite    = smoothstep(0.02, 0.68, drift);
-      const spread    = smoothstep(0.12, 1,    drift) * 16;
+      const spread    = smoothstep(0.12, 1,    drift) * cfg.spread;
       const colorSat  = smoothstep(0.0,  0.50, drift);
-      const parallaxX = smoothY * 0.008;
-      const parallaxY = smoothY * 0.12;
-      const baseYOffset = H * 0.18;
+      const parallaxX = smoothY * cfg.parallaxX;
+      const parallaxY = smoothY * cfg.parallaxY;
+      const baseYOffset = H * cfg.baseYOffset;
 
-      const HOVER_R  = 110;
+      const HOVER_R  = cfg.hoverRadius;
       const HOVER_R2 = HOVER_R * HOVER_R;
-      const MAX_PUSH = 38;
+      const MAX_PUSH = cfg.hoverPush;
+      const hoverEnabled = cfg.hoverOn && !_touch && !_reducedMotion && mx > -9000 && my > -9000;
 
-      const useGlow = TIER_CFG[TIER].glowOn;
+      const useGlow = cfg.glowOn && drift > 0.08;
       if (useGlow) glowCtx.clearRect(0, 0, W, H);
 
       for (const p of imageParticles) {
@@ -695,17 +819,19 @@
         let py = p.y + p.oy
           + baseYOffset
           - parallaxY * (0.20 + p.z * 0.50)
-          - ignite * (12 + p.z * 22.0);
+          - ignite * (cfg.igniteLift * 0.55 + p.z * cfg.igniteLift);
 
         // mouse repulsion — purely visual, particles home to origin each frame
-        const dx = px - mx;
-        const dy = py - my;
-        const d2 = dx * dx + dy * dy;
-        if (d2 < HOVER_R2 && d2 > 0.01) {
-          const d    = Math.sqrt(d2);
-          const push = Math.pow(1 - d / HOVER_R, 2) * MAX_PUSH;
-          px += (dx / d) * push;
-          py += (dy / d) * push;
+        if (hoverEnabled) {
+          const dx = px - mx;
+          const dy = py - my;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < HOVER_R2 && d2 > 0.01) {
+            const d    = Math.sqrt(d2);
+            const push = Math.pow(1 - d / HOVER_R, 2) * MAX_PUSH;
+            px += (dx / d) * push;
+            py += (dy / d) * push;
+          }
         }
 
         if (px < -8 || px > W + 8 || py < -8 || py > H + 8) continue;
@@ -724,7 +850,7 @@
         ctx.arc(px, py, radius, 0, Math.PI * 2);
         ctx.fill();
 
-        if (useGlow && p.luma > 0.68) {
+        if (useGlow && p.luma > cfg.glowThreshold) {
           glowCtx.fillStyle = `rgba(${pr},${pg},${pb},${alpha * 0.30})`;
           glowCtx.beginPath();
           glowCtx.arc(px, py, radius * 5, 0, Math.PI * 2);
@@ -737,6 +863,8 @@
     function resize() {
       W = window.innerWidth;
       H = window.innerHeight;
+      MAX_TIER = estimateMaxTier(W, H);
+      if (TIER > MAX_TIER) TIER = MAX_TIER;
 
       const DPR = Math.min(window.devicePixelRatio || 1, TIER_CFG[TIER].dprCap);
       canvas.width  = Math.floor(W * DPR);
@@ -745,6 +873,7 @@
       canvas.style.height = H + "px";
       ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 
+      glowCanvas.style.opacity = TIER_CFG[TIER].glowOn ? String(TIER_CFG[TIER].glowOpacity) : "0";
       if (TIER_CFG[TIER].glowOn) {
         const gDPR = DPR * 0.5;
         glowCanvas.width  = Math.floor(W * gDPR);
@@ -772,17 +901,33 @@
       const dt = now - lastNow;
       lastNow = now;
       if (dt > 0 && dt < 1000) {
-        if (dt > 26 && TIER > 0) {       // below ~38 fps
-          if (++slowFrames > 90) { TIER--; applyTier(); slowFrames = 0; }
+        if (dt > 28 && TIER > 0) {
+          slowFrames++;
+          fastFrames = 0;
+          if (slowFrames > 45) {
+            TIER--;
+            applyTier();
+            slowFrames = 0;
+          }
+        } else if (dt < 17 && TIER < MAX_TIER) {
+          fastFrames++;
+          slowFrames = Math.max(0, slowFrames - 2);
+          if (fastFrames > 180) {
+            TIER++;
+            applyTier();
+            fastFrames = 0;
+          }
         } else {
           slowFrames = Math.max(0, slowFrames - 1);
+          fastFrames = Math.max(0, fastFrames - 1);
         }
       }
 
       const time = now * 0.001;
 
       // smooth scroll for parallax
-      smoothY  += (scrollY - smoothY)   * 0.07;
+      const scrollEase = _reducedMotion ? 0.18 : 0.07;
+      smoothY  += (scrollY - smoothY)   * scrollEase;
       smoothMX += (mouseX  - smoothMX)  * 0.12;
       smoothMY += (mouseY  - smoothMY)  * 0.12;
 
@@ -805,6 +950,7 @@
     window.addEventListener("scroll", onScroll, { passive: true });
 
     function onPointerMove(e) {
+      if (!TIER_CFG[TIER].hoverOn || _touch || _reducedMotion) return;
       const src = e.touches ? e.touches[0] : e;
       mouseX = src.clientX;
       mouseY = src.clientY;
@@ -823,9 +969,8 @@
     });
 
     function start() {
-      // cap tier for touch/mobile devices
-      if ((_touch || W < 768) && TIER > 1) TIER = 1;
-      glowCanvas.style.opacity = TIER_CFG[TIER].glowOn ? "0.2" : "0";
+      TIER = Math.min(TIER, MAX_TIER);
+      glowCanvas.style.opacity = TIER_CFG[TIER].glowOn ? String(TIER_CFG[TIER].glowOpacity) : "0";
       resize();
       onScroll();
       rafId = requestAnimationFrame(render);
