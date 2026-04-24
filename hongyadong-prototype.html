@@ -817,6 +817,31 @@
         ctx.fillStyle = riverGlow;
         ctx.fillRect(0, 0, W, H);
       }
+
+      // Ground fog — visible on white, dissipates as scene goes dark
+      const fogStrength = smoothstep(0.35, 0.0, drift);
+      if (fogStrength > 0.005) {
+        const fogH = H * 0.42;
+        const fogY = H - fogH;
+        const fog = ctx.createLinearGradient(0, fogY, 0, H);
+        fog.addColorStop(0, `rgba(245,243,240,0)`);
+        fog.addColorStop(0.38, `rgba(248,246,243,${0.52 * fogStrength})`);
+        fog.addColorStop(1, `rgba(250,248,245,${0.86 * fogStrength})`);
+        ctx.fillStyle = fog;
+        ctx.fillRect(0, fogY, W, fogH);
+
+        const w1 = ctx.createRadialGradient(W*0.3, H*0.9, 0, W*0.3, H*0.9, W*0.44);
+        w1.addColorStop(0, `rgba(250,248,245,${0.3 * fogStrength})`);
+        w1.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = w1;
+        ctx.fillRect(0, H*0.65, W, H*0.35);
+
+        const w2 = ctx.createRadialGradient(W*0.74, H*0.93, 0, W*0.74, H*0.93, W*0.36);
+        w2.addColorStop(0, `rgba(250,248,245,${0.24 * fogStrength})`);
+        w2.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = w2;
+        ctx.fillRect(0, H*0.7, W, H*0.3);
+      }
     }
 
     function drawImageParticles(time, drift, mx, my) {
