@@ -1252,6 +1252,7 @@ export default function HongyadongFramer(props: Props) {
                     ref={sourceImageRef}
                     className="hyf-source-image"
                     src={imageSrc}
+                    crossOrigin="anonymous"
                     alt=""
                 />
                 <div className="hyf-fog" />
