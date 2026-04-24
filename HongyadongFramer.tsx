@@ -238,6 +238,7 @@ export default function HongyadongFramer(props: Props) {
         let lastNow = 0
         let copyVisible = false
         let titleReadyFrame = 0
+        let scrollMax = 1
 
         const TIER_CFG = [
             {
@@ -266,7 +267,7 @@ export default function HongyadongFramer(props: Props) {
                 glowOpacity: 0.12,
                 moteCount: 12,
                 sampleStep: 2,
-                hoverOn: false,
+                hoverOn: true,
                 hoverRadius: 84,
                 hoverPush: 20,
                 spread: 13,
@@ -547,7 +548,6 @@ export default function HongyadongFramer(props: Props) {
                 const alpha = p.a * Math.max(0, edge)
                 if (alpha < 0.015) continue
 
-                const blackAmount = 1 - drift
                 const colorAmount = drift
                 let r = 0
                 let g = 0
@@ -563,11 +563,7 @@ export default function HongyadongFramer(props: Props) {
                     b = Math.round(255 * colorAmount)
                 }
 
-                ctx.fillStyle = `rgba(${Math.round(
-                    r * colorAmount + 0 * blackAmount
-                )},${Math.round(g * colorAmount + 0 * blackAmount)},${Math.round(
-                    b * colorAmount + 0 * blackAmount
-                )},${alpha})`
+                ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`
                 ctx.beginPath()
                 ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
                 ctx.fill()
@@ -636,7 +632,6 @@ export default function HongyadongFramer(props: Props) {
             const MAX_PUSH = cfg.hoverPush
             const hoverEnabled =
                 cfg.hoverOn &&
-                !touchCapable &&
                 !reducedMotion &&
                 mx > -9000 &&
                 my > -9000
@@ -666,7 +661,8 @@ export default function HongyadongFramer(props: Props) {
                     const d2 = dx * dx + dy * dy
                     if (d2 < HOVER_R2 && d2 > 0.01) {
                         const d = Math.sqrt(d2)
-                        const push = Math.pow(1 - d / HOVER_R, 2) * MAX_PUSH
+                        const t = 1 - d / HOVER_R
+                        const push = t * t * MAX_PUSH
                         px += (dx / d) * push
                         py += (dy / d) * push
                     }
@@ -681,9 +677,9 @@ export default function HongyadongFramer(props: Props) {
                     (1 + ignite * p.luma * 0.08) *
                     (0.7 + p.z * 0.5)
                 const alpha = p.alpha * twinkle * (0.65 + p.z * 0.35)
-                const pr = Math.round(lerp(0, p.sr, colorSat))
-                const pg = Math.round(lerp(0, p.sg, colorSat))
-                const pb = Math.round(lerp(0, p.sb, colorSat))
+                const pr = Math.round(p.sr * colorSat)
+                const pg = Math.round(p.sg * colorSat)
+                const pb = Math.round(p.sb * colorSat)
 
                 ctx.fillStyle = `rgba(${pr},${pg},${pb},${alpha})`
                 ctx.beginPath()
@@ -726,6 +722,7 @@ export default function HongyadongFramer(props: Props) {
                 ? String(TIER_CFG[tier].glowOpacity)
                 : "0"
 
+            scrollMax = Math.max(rootEl.offsetHeight - H, 1)
             buildMotes()
             buildImageParticles()
         }
@@ -735,15 +732,17 @@ export default function HongyadongFramer(props: Props) {
                 ? String(TIER_CFG[tier].glowOpacity)
                 : "0"
             buildMotes()
-            buildImageParticles()
+            const snapTier = tier
+            const rebuild = () => { if (tier === snapTier) buildImageParticles() }
+            if ((window as any).requestIdleCallback) (window as any).requestIdleCallback(rebuild)
+            else setTimeout(rebuild, 0)
         }
 
         const syncProgress = () => {
-            const maxScroll = Math.max(rootEl.offsetHeight - H, 1)
             const rawScroll = isCanvas
-                ? clamp(scrollDemoRef.current, 0, 1) * maxScroll
-                : clamp(-rootEl.getBoundingClientRect().top, 0, maxScroll)
-            const progress = clamp(rawScroll / (maxScroll * 0.72), 0, 1)
+                ? clamp(scrollDemoRef.current, 0, 1) * scrollMax
+                : clamp(-rootEl.getBoundingClientRect().top, 0, scrollMax)
+            const progress = clamp(rawScroll / (scrollMax * 0.72), 0, 1)
             currentScrollPx = rawScroll
             syncUIText(progress)
         }
@@ -776,11 +775,10 @@ export default function HongyadongFramer(props: Props) {
             }
 
             const time = now * 0.001
-            const maxScroll = Math.max(rootEl.offsetHeight - H, 1)
             if (isCanvas) {
-                currentScrollPx = clamp(scrollDemoRef.current, 0, 1) * maxScroll
+                currentScrollPx = clamp(scrollDemoRef.current, 0, 1) * scrollMax
             }
-            const drift = clamp(currentScrollPx / (maxScroll * 0.72), 0, 1)
+            const drift = clamp(currentScrollPx / (scrollMax * 0.72), 0, 1)
 
             const scrollEase = reducedMotion ? 0.18 : 0.07
             smoothY += (currentScrollPx - smoothY) * scrollEase
@@ -796,14 +794,10 @@ export default function HongyadongFramer(props: Props) {
             rafId = requestAnimationFrame(render)
         }
 
-        const handlePointerMove = (event: MouseEvent | TouchEvent) => {
-            if (!TIER_CFG[tier].hoverOn || touchCapable || reducedMotion) return
-            const point =
-                "touches" in event && event.touches.length > 0
-                    ? event.touches[0]
-                    : (event as MouseEvent)
-            mouseX = point.clientX
-            mouseY = point.clientY
+        const handlePointerMove = (event: MouseEvent) => {
+            if (!TIER_CFG[tier].hoverOn || reducedMotion) return
+            mouseX = event.clientX
+            mouseY = event.clientY
         }
 
         const handlePointerLeave = () => {
@@ -833,7 +827,7 @@ export default function HongyadongFramer(props: Props) {
         window.addEventListener("mousemove", handlePointerMove, {
             passive: true,
         })
-        window.addEventListener("touchmove", handlePointerMove, {
+        window.addEventListener("touchstart", handlePointerLeave, {
             passive: true,
         })
         window.addEventListener("mouseleave", handlePointerLeave)
@@ -871,7 +865,7 @@ export default function HongyadongFramer(props: Props) {
             window.removeEventListener("resize", handleResize)
             window.removeEventListener("scroll", syncProgress)
             window.removeEventListener("mousemove", handlePointerMove)
-            window.removeEventListener("touchmove", handlePointerMove)
+            window.removeEventListener("touchstart", handlePointerLeave)
             window.removeEventListener("mouseleave", handlePointerLeave)
             window.removeEventListener("touchend", handlePointerLeave)
             document.removeEventListener("visibilitychange", handleVisibility)
@@ -1039,6 +1033,7 @@ export default function HongyadongFramer(props: Props) {
                     font-weight: 500;
                     letter-spacing: 0.18em;
                     color: rgba(0, 0, 0, 0.42);
+                    text-shadow: 0 2px 12px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.12);
                 }
 
                 .hyf-reveal-copy {
@@ -1085,6 +1080,7 @@ export default function HongyadongFramer(props: Props) {
                     line-height: 1.55;
                     letter-spacing: -0.01em;
                     color: rgba(0, 0, 0, 0.50);
+                    text-shadow: 0 2px 12px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.12);
                     white-space: pre-line;
                 }
 

@@ -152,8 +152,8 @@
       font-family: 'Cormorant Garamond', 'ZCOOL XiaoWei', 'Noto Serif SC', Georgia, serif;
       font-size: clamp(82px, 12vw, 168px);
       line-height: 0.88;
-      font-weight: 600;
-      letter-spacing: 0.015em;
+      font-weight: 300;
+      letter-spacing: 0.02em;
       color: var(--ui-title-color);
       text-transform: none;
     }
@@ -192,6 +192,7 @@
       font-weight: 500;
       letter-spacing: 0.18em;
       color: var(--ui-zh-color);
+      text-shadow: 0 2px 12px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.12);
     }
 
     .reveal-copy {
@@ -217,8 +218,8 @@
     }
 
     .reveal-copy.is-visible .reveal-word {
-      animation: copyReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-      animation-delay: calc(var(--reveal-delay, 0ms) + (var(--word-index) * 70ms));
+      animation: copyReveal 1.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      animation-delay: calc(var(--reveal-delay, 0ms) + (var(--word-index) * 110ms));
     }
 
     @keyframes copyReveal {
@@ -238,6 +239,7 @@
       line-height: 1.55;
       letter-spacing: -0.01em;
       color: var(--ui-sub-color);
+      text-shadow: 0 2px 12px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.12);
     }
 
     .side {
@@ -359,20 +361,20 @@
     <!-- Layer 4: UI -->
     <div class="ui">
       <div class="top">
-        <div class="eyebrow reveal-copy" style="--reveal-delay: 40ms;">Profile</div>
+        <div class="eyebrow reveal-copy" style="--reveal-delay: 80ms;">Profile</div>
       </div>
 
       <div class="hero">
         <h1 id="heroTitle"><span class="title-line">About</span><span class="title-line">Me.</span></h1>
         <div class="zh">好雪片々，不落别處</div>
-        <p class="sub reveal-copy" style="--reveal-delay: 120ms;">
+        <p class="sub reveal-copy" style="--reveal-delay: 260ms;">
           Product designer & creative developer.<br>
           I design for intuition — building at the intersection of humanities and creative engineering.
         </p>
       </div>
 
       <div class="bottom">
-        <div class="hint reveal-copy" style="--reveal-delay: 180ms;">Scroll to explore</div>
+        <div class="hint reveal-copy" style="--reveal-delay: 420ms;">Scroll to explore</div>
       </div>
     </div>
 
@@ -396,6 +398,12 @@
 
     const offscreen  = document.createElement("canvas");
     const offCtx     = offscreen.getContext("2d", { willReadFrequently: true });
+
+    // pixel-buffer canvas — one putImageData() replaces 15 000 arc/fill calls
+    const pxCanvas = document.createElement("canvas");
+    const pxCtx    = pxCanvas.getContext("2d", { alpha: true });
+    let pxImgData  = null;
+    let pxPixels   = null;
 
     // ── hardware tier ─────────────────────────────────────────────────
     // 0 = low  (old phone, budget device)
@@ -445,6 +453,8 @@
         baseYOffset: 0.16,
         igniteLift: 16,
         glowThreshold: 1,
+        pxScale: 0.5,   // half-res pixel buffer: 4× less memory bandwidth
+        twinkle: false, // skip Math.sin per particle; enables idle-skip
       },
       {
         sampleLong: 300,
@@ -454,7 +464,7 @@
         glowOpacity: 0.12,
         moteCount: 12,
         sampleStep: 2,
-        hoverOn: false,
+        hoverOn: true,
         hoverRadius: 84,
         hoverPush: 20,
         spread: 13,
@@ -463,6 +473,8 @@
         baseYOffset: 0.17,
         igniteLift: 18,
         glowThreshold: 0.76,
+        pxScale: 1,
+        twinkle: true,
       },
       {
         sampleLong: 440,
@@ -481,24 +493,37 @@
         baseYOffset: 0.18,
         igniteLift: 22,
         glowThreshold: 0.68,
+        pxScale: 1,
+        twinkle: true,
       },
     ];
 
     function applyTier() {
       const cfg = TIER_CFG[TIER];
       glowCanvas.style.opacity = cfg.glowOn ? String(cfg.glowOpacity) : "0";
+      // resize pixel buffer for new tier's pxScale
+      const ps = cfg.pxScale;
+      pxCanvas.width  = Math.ceil(W * ps);
+      pxCanvas.height = Math.ceil(H * ps);
+      pxImgData = pxCtx.createImageData(pxCanvas.width, pxCanvas.height);
+      pxPixels  = pxImgData.data;
+      lastDrift = -1; // force redraw on next frame
       buildMotes();
-      buildImageParticles();
+      const snapTier = TIER;
+      const rebuild = () => { if (TIER === snapTier) buildImageParticles(); };
+      if (window.requestIdleCallback) requestIdleCallback(rebuild);
+      else setTimeout(rebuild, 0);
     }
 
     let W = 0, H = 0;
     let scrollY = 0, smoothY = 0;
     let mouseX = -9999, mouseY = -9999;
     let smoothMX = -9999, smoothMY = -9999;
-    let rafId, resizeTimer;
+    let rafId, resizeTimer, scrollMax = 1;
     let imageParticles = [];
     let motes = [];
     let slowFrames = 0, fastFrames = 0, lastNow = 0;
+    let lastDrift = -1, lastSmoothMX = -9999, lastSmoothMY = -9999;
 
     // ── helpers ──────────────────────────────────────────────────────
     function hash(n) {
@@ -574,7 +599,7 @@
 
     if (heroZhEl) {
       heroZhEl.classList.add("reveal-copy");
-      heroZhEl.style.setProperty("--reveal-delay", "80ms");
+      heroZhEl.style.setProperty("--reveal-delay", "160ms");
     }
 
     [eyebrowEl, heroZhEl, heroSubEl, hintEl].forEach(prepareWordReveal);
@@ -796,20 +821,27 @@
 
     function drawImageParticles(time, drift, mx, my) {
       const cfg = TIER_CFG[TIER];
-      const ignite    = smoothstep(0.02, 0.68, drift);
-      const spread    = smoothstep(0.12, 1,    drift) * cfg.spread;
-      const colorSat  = smoothstep(0.0,  0.50, drift);
-      const parallaxX = smoothY * cfg.parallaxX;
-      const parallaxY = smoothY * cfg.parallaxY;
+      const ignite      = smoothstep(0.02, 0.68, drift);
+      const spread      = smoothstep(0.12, 1,    drift) * cfg.spread;
+      const colorSat    = smoothstep(0.0,  0.50, drift);
+      const parallaxX   = smoothY * cfg.parallaxX;
+      const parallaxY   = smoothY * cfg.parallaxY;
       const baseYOffset = H * cfg.baseYOffset;
 
       const HOVER_R  = cfg.hoverRadius;
       const HOVER_R2 = HOVER_R * HOVER_R;
       const MAX_PUSH = cfg.hoverPush;
-      const hoverEnabled = cfg.hoverOn && !_touch && !_reducedMotion && mx > -9000 && my > -9000;
+      const hoverEnabled = cfg.hoverOn && !_reducedMotion && mx > -9000 && my > -9000;
 
       const useGlow = cfg.glowOn && drift > 0.08;
       if (useGlow) glowCtx.clearRect(0, 0, W, H);
+
+      // clear pixel buffer (transparent)
+      pxPixels.fill(0);
+
+      const pxScale = cfg.pxScale;
+      const PW = pxCanvas.width;
+      const PH = pxCanvas.height;
 
       for (const p of imageParticles) {
         const layerDepth = 1 + p.z * 0.22;
@@ -821,35 +853,54 @@
           - parallaxY * (0.20 + p.z * 0.50)
           - ignite * (cfg.igniteLift * 0.55 + p.z * cfg.igniteLift);
 
-        // mouse repulsion — purely visual, particles home to origin each frame
         if (hoverEnabled) {
           const dx = px - mx;
           const dy = py - my;
           const d2 = dx * dx + dy * dy;
           if (d2 < HOVER_R2 && d2 > 0.01) {
-            const d    = Math.sqrt(d2);
-            const push = Math.pow(1 - d / HOVER_R, 2) * MAX_PUSH;
-            px += (dx / d) * push;
-            py += (dy / d) * push;
+            const d = Math.sqrt(d2);
+            const t = 1 - d / HOVER_R;
+            px += (dx / d) * t * t * MAX_PUSH;
+            py += (dy / d) * t * t * MAX_PUSH;
           }
         }
 
         if (px < -8 || px > W + 8 || py < -8 || py > H + 8) continue;
 
-        const twinkle = 0.84 + Math.sin(time * 1.15 + p.twinkle) * 0.16;
+        const twinkle = cfg.twinkle
+          ? 0.84 + Math.sin(time * 1.15 + p.twinkle) * 0.16
+          : 0.92;
         const radius  = p.radius * twinkle * (1 + ignite * p.luma * 0.08) * (0.7 + p.z * 0.5);
-        const alpha   = p.alpha * twinkle * (0.65 + p.z * 0.35);
+        const alpha   = p.alpha  * twinkle * (0.65 + p.z * 0.35);
+        const pr      = Math.round(p.sr * colorSat);
+        const pg      = Math.round(p.sg * colorSat);
+        const pb      = Math.round(p.sb * colorSat);
+        const pA      = (alpha * 255) | 0;
 
-        // lerp black → saturated colour as user scrolls
-        const pr = Math.round(lerp(0, p.sr, colorSat));
-        const pg = Math.round(lerp(0, p.sg, colorSat));
-        const pb = Math.round(lerp(0, p.sb, colorSat));
+        // stamp circle — coordinates scaled to pixel buffer resolution
+        const bx  = (px * pxScale) | 0;
+        const by  = (py * pxScale) | 0;
+        const br  = Math.max(1, Math.ceil(radius * pxScale));
+        const br2 = (radius * pxScale) * (radius * pxScale);
+        for (let dy = -br; dy <= br; dy++) {
+          const y2 = dy * dy;
+          if (y2 > br2) continue;
+          const row = by + dy;
+          if (row < 0 || row >= PH) continue;
+          const rowOff = (row * PW) << 2;
+          for (let dx = -br; dx <= br; dx++) {
+            if (dx * dx + y2 > br2) continue;
+            const col = bx + dx;
+            if (col < 0 || col >= PW) continue;
+            const i = rowOff + (col << 2);
+            pxPixels[i]     = pr;
+            pxPixels[i + 1] = pg;
+            pxPixels[i + 2] = pb;
+            pxPixels[i + 3] = pA;
+          }
+        }
 
-        ctx.fillStyle = `rgba(${pr},${pg},${pb},${alpha})`;
-        ctx.beginPath();
-        ctx.arc(px, py, radius, 0, Math.PI * 2);
-        ctx.fill();
-
+        // glow pass kept as Canvas 2D — only bright particles, very few calls
         if (useGlow && p.luma > cfg.glowThreshold) {
           glowCtx.fillStyle = `rgba(${pr},${pg},${pb},${alpha * 0.30})`;
           glowCtx.beginPath();
@@ -857,6 +908,10 @@
           glowCtx.fill();
         }
       }
+
+      // single GPU upload — replaces thousands of arc/fill draw calls
+      pxCtx.putImageData(pxImgData, 0, 0);
+      ctx.drawImage(pxCanvas, 0, 0);
     }
 
     // ── resize ────────────────────────────────────────────────────────
@@ -873,16 +928,21 @@
       canvas.style.height = H + "px";
       ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 
+      const gDPR = DPR * 0.5;
+      glowCanvas.width  = Math.floor(W * gDPR);
+      glowCanvas.height = Math.floor(H * gDPR);
+      glowCanvas.style.width  = W + "px";
+      glowCanvas.style.height = H + "px";
+      glowCtx.setTransform(gDPR, 0, 0, gDPR, 0, 0);
       glowCanvas.style.opacity = TIER_CFG[TIER].glowOn ? String(TIER_CFG[TIER].glowOpacity) : "0";
-      if (TIER_CFG[TIER].glowOn) {
-        const gDPR = DPR * 0.5;
-        glowCanvas.width  = Math.floor(W * gDPR);
-        glowCanvas.height = Math.floor(H * gDPR);
-        glowCanvas.style.width  = W + "px";
-        glowCanvas.style.height = H + "px";
-        glowCtx.setTransform(gDPR, 0, 0, gDPR, 0, 0);
-      }
 
+      const ps = TIER_CFG[TIER].pxScale;
+      pxCanvas.width  = Math.ceil(W * ps);
+      pxCanvas.height = Math.ceil(H * ps);
+      pxImgData = pxCtx.createImageData(pxCanvas.width, pxCanvas.height);
+      pxPixels  = pxImgData.data;
+
+      scrollMax = Math.max(1, document.documentElement.scrollHeight - H);
       buildMotes();
       buildImageParticles();
     }
@@ -890,8 +950,7 @@
     // ── scroll ────────────────────────────────────────────────────────
     function onScroll() {
       scrollY = window.scrollY;
-      const max = Math.max(1, document.documentElement.scrollHeight - H);
-      const progress = clamp(scrollY / (max * 0.72), 0, 1);
+      const progress = clamp(scrollY / (scrollMax * 0.72), 0, 1);
       syncUIText(progress);
     }
 
@@ -931,8 +990,21 @@
       smoothMX += (mouseX  - smoothMX)  * 0.12;
       smoothMY += (mouseY  - smoothMY)  * 0.12;
 
-      const max = Math.max(1, document.documentElement.scrollHeight - H);
-      const drift = clamp(smoothY / (max * 0.72), 0, 1);
+      const drift = clamp(smoothY / (scrollMax * 0.72), 0, 1);
+
+      // idle-skip: tier 0 has no twinkle so the scene is deterministic —
+      // skip drawing when nothing has changed (saves ~100% CPU when not scrolling)
+      if (!TIER_CFG[TIER].twinkle && lastDrift >= 0
+          && Math.abs(drift - lastDrift) < 0.0005
+          && Math.abs(smoothMX - lastSmoothMX) < 1
+          && Math.abs(smoothMY - lastSmoothMY) < 1) {
+        fastFrames = 0; // don't count idle frames as "fast renders"
+        rafId = requestAnimationFrame(render);
+        return;
+      }
+      lastDrift    = drift;
+      lastSmoothMX = smoothMX;
+      lastSmoothMY = smoothMY;
 
       ctx.clearRect(0, 0, W, H);
       drawBackdrop(drift);
@@ -949,15 +1021,14 @@
     });
     window.addEventListener("scroll", onScroll, { passive: true });
 
-    function onPointerMove(e) {
-      if (!TIER_CFG[TIER].hoverOn || _touch || _reducedMotion) return;
-      const src = e.touches ? e.touches[0] : e;
-      mouseX = src.clientX;
-      mouseY = src.clientY;
+    function onMouseMove(e) {
+      if (!TIER_CFG[TIER].hoverOn || _reducedMotion) return;
+      mouseX = e.clientX;
+      mouseY = e.clientY;
     }
     function onPointerLeave() { mouseX = -9999; mouseY = -9999; }
-    window.addEventListener("mousemove",  onPointerMove);
-    window.addEventListener("touchmove",  onPointerMove, { passive: true });
+    window.addEventListener("mousemove",  onMouseMove, { passive: true });
+    window.addEventListener("touchstart", onPointerLeave, { passive: true });
     window.addEventListener("mouseleave", onPointerLeave);
     window.addEventListener("touchend",   onPointerLeave);
     document.addEventListener("visibilitychange", () => {
