@@ -553,6 +553,48 @@ export default function HongyadongFramer(props: Props) {
             }
         }
 
+        const drawFog = (time: number, drift: number) => {
+            const fogStrength = smoothstep(0.35, 0.0, drift)
+            if (fogStrength < 0.005) return
+
+            // Layered elliptical fog bands, each drifting at a different speed
+            const layers = [
+                { yFrac: 0.52, ryFrac: 0.052, rxMult: 12, speed: 0.013, phase: 0.0, alpha: 0.16 },
+                { yFrac: 0.63, ryFrac: 0.068, rxMult: 11, speed: -0.010, phase: 2.1, alpha: 0.21 },
+                { yFrac: 0.73, ryFrac: 0.088, rxMult: 10, speed: 0.008,  phase: 4.4, alpha: 0.27 },
+                { yFrac: 0.82, ryFrac: 0.108, rxMult: 9,  speed: -0.006, phase: 1.7, alpha: 0.33 },
+            ]
+
+            for (const l of layers) {
+                const ry = l.ryFrac * H
+                const rx = ry * l.rxMult
+                const cx = W * 0.5 + Math.sin(time * l.speed + l.phase) * W * 0.13
+                const cy = l.yFrac * H
+                const breathe = 0.88 + Math.sin(time * 0.36 + l.phase) * 0.12
+                const a = l.alpha * fogStrength * breathe
+
+                ctx.save()
+                ctx.translate(cx, cy)
+                ctx.scale(rx / ry, 1)
+                const g = ctx.createRadialGradient(0, 0, 0, 0, 0, ry)
+                g.addColorStop(0, `rgba(248,246,242,${a})`)
+                g.addColorStop(0.55, `rgba(248,246,242,${a * 0.38})`)
+                g.addColorStop(1, "rgba(248,246,242,0)")
+                ctx.fillStyle = g
+                ctx.beginPath()
+                ctx.arc(0, 0, ry, 0, Math.PI * 2)
+                ctx.fill()
+                ctx.restore()
+            }
+
+            // Dense base at very bottom
+            const base = ctx.createLinearGradient(0, H * 0.87, 0, H)
+            base.addColorStop(0, "rgba(248,246,242,0)")
+            base.addColorStop(1, `rgba(248,246,242,${0.68 * fogStrength})`)
+            ctx.fillStyle = base
+            ctx.fillRect(0, H * 0.87, W, H * 0.13)
+        }
+
         const drawMotes = (drift: number) => {
             for (const p of motes) {
                 p.y -= p.vy
@@ -632,30 +674,6 @@ export default function HongyadongFramer(props: Props) {
                 ctx.fillRect(0, 0, W, H)
             }
 
-            // Ground fog — visible on white, dissipates as scene goes dark
-            const fogStrength = smoothstep(0.35, 0.0, drift)
-            if (fogStrength > 0.005) {
-                const fogH = H * 0.42
-                const fogY = H - fogH
-                const fog = ctx.createLinearGradient(0, fogY, 0, H)
-                fog.addColorStop(0, `rgba(245,243,240,0)`)
-                fog.addColorStop(0.38, `rgba(248,246,243,${0.52 * fogStrength})`)
-                fog.addColorStop(1, `rgba(250,248,245,${0.86 * fogStrength})`)
-                ctx.fillStyle = fog
-                ctx.fillRect(0, fogY, W, fogH)
-
-                const w1 = ctx.createRadialGradient(W * 0.3, H * 0.9, 0, W * 0.3, H * 0.9, W * 0.44)
-                w1.addColorStop(0, `rgba(250,248,245,${0.3 * fogStrength})`)
-                w1.addColorStop(1, "rgba(0,0,0,0)")
-                ctx.fillStyle = w1
-                ctx.fillRect(0, H * 0.65, W, H * 0.35)
-
-                const w2 = ctx.createRadialGradient(W * 0.74, H * 0.93, 0, W * 0.74, H * 0.93, W * 0.36)
-                w2.addColorStop(0, `rgba(250,248,245,${0.24 * fogStrength})`)
-                w2.addColorStop(1, "rgba(0,0,0,0)")
-                ctx.fillStyle = w2
-                ctx.fillRect(0, H * 0.7, W, H * 0.3)
-            }
         }
 
         const drawImageParticles = (
@@ -885,6 +903,7 @@ export default function HongyadongFramer(props: Props) {
             ctx.clearRect(0, 0, W, H)
             drawBackdrop(drift)
             drawImageParticles(time, drift, smoothMX, smoothMY)
+            drawFog(time, drift)
             drawMotes(drift)
 
             rafId = requestAnimationFrame(render)
