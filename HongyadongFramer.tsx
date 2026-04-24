@@ -188,6 +188,12 @@ export default function HongyadongFramer(props: Props) {
         const offCtx = offscreen.getContext("2d", { willReadFrequently: true })
         if (!offCtx) return
 
+        const pxCanvas = document.createElement("canvas")
+        const pxCtx = pxCanvas.getContext("2d", { alpha: true })
+        if (!pxCtx) return
+        let pxImgData: ImageData | null = null
+        let pxPixels: Uint8ClampedArray | null = null
+
         const isCanvas = RenderTarget.current() === RenderTarget.canvas
         const touchCapable = "ontouchstart" in window
         const cores = navigator.hardwareConcurrency || 2
@@ -242,6 +248,9 @@ export default function HongyadongFramer(props: Props) {
         let copyVisible = false
         let titleReadyFrame = 0
         let scrollMax = 1
+        let lastDrift = -1
+        let lastSmoothMX = -9999
+        let lastSmoothMY = -9999
 
         const TIER_CFG = [
             {
@@ -261,6 +270,8 @@ export default function HongyadongFramer(props: Props) {
                 baseYOffset: 0.16,
                 igniteLift: 16,
                 glowThreshold: 1,
+                pxScale: 0.5,
+                twinkle: false,
             },
             {
                 sampleLong: 300,
@@ -279,6 +290,8 @@ export default function HongyadongFramer(props: Props) {
                 baseYOffset: 0.17,
                 igniteLift: 18,
                 glowThreshold: 0.76,
+                pxScale: 1,
+                twinkle: true,
             },
             {
                 sampleLong: 440,
@@ -297,6 +310,8 @@ export default function HongyadongFramer(props: Props) {
                 baseYOffset: 0.18,
                 igniteLift: 22,
                 glowThreshold: 0.68,
+                pxScale: 1,
+                twinkle: true,
             },
         ]
 
@@ -624,6 +639,9 @@ export default function HongyadongFramer(props: Props) {
             mx: number,
             my: number
         ) => {
+            if (!pxPixels || !pxImgData) return
+            const pixels = pxPixels as Uint8ClampedArray
+            const imgData = pxImgData as ImageData
             const cfg = TIER_CFG[tier]
             const ignite = smoothstep(0.02, 0.68, drift)
             const spread = smoothstep(0.12, 1, drift) * cfg.spread
@@ -635,15 +653,15 @@ export default function HongyadongFramer(props: Props) {
             const HOVER_R2 = HOVER_R * HOVER_R
             const MAX_PUSH = cfg.hoverPush
             const hoverEnabled =
-                cfg.hoverOn &&
-                !reducedMotion &&
-                mx > -9000 &&
-                my > -9000
+                cfg.hoverOn && !reducedMotion && mx > -9000 && my > -9000
 
             const useGlow = cfg.glowOn && drift > 0.08
-            if (useGlow) {
-                glowCtx.clearRect(0, 0, W, H)
-            }
+            if (useGlow) glowCtx.clearRect(0, 0, W, H)
+
+            const ps = cfg.pxScale
+            const PW = pxCanvas.width
+            const PH = pxCanvas.height
+            pixels.fill(0)
 
             for (const p of imageParticles) {
                 const layerDepth = 1 + p.z * 0.22
@@ -674,7 +692,9 @@ export default function HongyadongFramer(props: Props) {
 
                 if (px < -8 || px > W + 8 || py < -8 || py > H + 8) continue
 
-                const twinkle = 0.84 + Math.sin(time * 1.15 + p.twinkle) * 0.16
+                const twinkle = cfg.twinkle
+                    ? 0.84 + Math.sin(time * 1.15 + p.twinkle) * 0.16
+                    : 0.92
                 const radius =
                     p.radius *
                     twinkle *
@@ -684,11 +704,29 @@ export default function HongyadongFramer(props: Props) {
                 const pr = Math.round(p.sr * colorSat)
                 const pg = Math.round(p.sg * colorSat)
                 const pb = Math.round(p.sb * colorSat)
+                const pA = Math.round(alpha * 255)
 
-                ctx.fillStyle = `rgba(${pr},${pg},${pb},${alpha})`
-                ctx.beginPath()
-                ctx.arc(px, py, radius, 0, Math.PI * 2)
-                ctx.fill()
+                const bx = (px * ps) | 0
+                const by = (py * ps) | 0
+                const br = Math.max(1, Math.ceil(radius * ps))
+                const br2 = radius * ps * (radius * ps)
+                for (let dy = -br; dy <= br; dy++) {
+                    const y2 = dy * dy
+                    if (y2 > br2) continue
+                    const row = by + dy
+                    if (row < 0 || row >= PH) continue
+                    const rowOff = (row * PW) << 2
+                    for (let dx = -br; dx <= br; dx++) {
+                        if (dx * dx + y2 > br2) continue
+                        const col = bx + dx
+                        if (col < 0 || col >= PW) continue
+                        const i = rowOff + (col << 2)
+                        pxPixels[i] = pr
+                        pxPixels[i + 1] = pg
+                        pxPixels[i + 2] = pb
+                        pxPixels[i + 3] = pA
+                    }
+                }
 
                 if (useGlow && p.luma > cfg.glowThreshold) {
                     glowCtx.fillStyle = `rgba(${pr},${pg},${pb},${alpha * 0.3})`
@@ -697,6 +735,9 @@ export default function HongyadongFramer(props: Props) {
                     glowCtx.fill()
                 }
             }
+
+            pxCtx.putImageData(imgData, 0, 0)
+            ctx.drawImage(pxCanvas, 0, 0, W, H)
         }
 
         const resize = () => {
@@ -727,14 +768,25 @@ export default function HongyadongFramer(props: Props) {
                 : "0"
 
             scrollMax = Math.max(rootEl.offsetHeight - H, 1)
+            const ps0 = TIER_CFG[tier].pxScale
+            pxCanvas.width = Math.ceil(W * ps0)
+            pxCanvas.height = Math.ceil(H * ps0)
+            pxImgData = pxCtx.createImageData(pxCanvas.width, pxCanvas.height)
+            pxPixels = pxImgData.data
+            lastDrift = -1
             buildMotes()
             buildImageParticles()
         }
 
         const applyTier = () => {
-            glowCanvasEl.style.opacity = TIER_CFG[tier].glowOn
-                ? String(TIER_CFG[tier].glowOpacity)
-                : "0"
+            const cfg = TIER_CFG[tier]
+            glowCanvasEl.style.opacity = cfg.glowOn ? String(cfg.glowOpacity) : "0"
+            const ps = cfg.pxScale
+            pxCanvas.width = Math.ceil(W * ps)
+            pxCanvas.height = Math.ceil(H * ps)
+            pxImgData = pxCtx.createImageData(pxCanvas.width, pxCanvas.height)
+            pxPixels = pxImgData.data
+            lastDrift = -1
             buildMotes()
             const snapTier = tier
             const rebuild = () => { if (tier === snapTier) buildImageParticles() }
@@ -788,6 +840,21 @@ export default function HongyadongFramer(props: Props) {
             smoothY += (currentScrollPx - smoothY) * scrollEase
             smoothMX += (mouseX - smoothMX) * 0.12
             smoothMY += (mouseY - smoothMY) * 0.12
+
+            if (
+                !TIER_CFG[tier].twinkle &&
+                lastDrift >= 0 &&
+                Math.abs(drift - lastDrift) < 0.0005 &&
+                Math.abs(smoothMX - lastSmoothMX) < 1 &&
+                Math.abs(smoothMY - lastSmoothMY) < 1
+            ) {
+                fastFrames = 0
+                rafId = requestAnimationFrame(render)
+                return
+            }
+            lastDrift = drift
+            lastSmoothMX = smoothMX
+            lastSmoothMY = smoothMY
 
             syncUIText(drift)
             ctx.clearRect(0, 0, W, H)
