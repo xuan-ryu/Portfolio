@@ -10,6 +10,7 @@ type Props = {
     titleLine2: string
     titleZh: string
     subtitle: string
+    signatureNote: string
     scrollDemo: number
 }
 
@@ -102,6 +103,30 @@ function renderRevealText(text: string) {
     })
 }
 
+function renderRevealCharacters(text: string) {
+    let charIndex = 0
+
+    return Array.from(text).map((char, index) => {
+        if (char === " ") {
+            return <span key={`space-${index}`} className="hyf-reveal-space" />
+        }
+
+        return (
+            <span
+                key={`${char}-${index}`}
+                className="hyf-reveal-char"
+                style={
+                    {
+                        ["--char-index" as any]: charIndex++,
+                    } as React.CSSProperties
+                }
+            >
+                {char}
+            </span>
+        )
+    })
+}
+
 type ImageParticle = {
     x: number
     y: number
@@ -139,6 +164,7 @@ export default function HongyadongFramer(props: Props) {
         titleLine2,
         titleZh,
         subtitle,
+        signatureNote,
         scrollDemo,
     } = props
 
@@ -151,6 +177,7 @@ export default function HongyadongFramer(props: Props) {
     const bottomRef = useRef<HTMLDivElement>(null)
     const eyebrowRef = useRef<HTMLDivElement>(null)
     const signatureRef = useRef<HTMLDivElement>(null)
+    const signatureNoteRef = useRef<HTMLParagraphElement>(null)
     const avatarRef = useRef<HTMLDivElement>(null)
     const titleRef = useRef<HTMLHeadingElement>(null)
     const zhRef = useRef<HTMLDivElement>(null)
@@ -336,6 +363,11 @@ export default function HongyadongFramer(props: Props) {
                 mixColor([0, 0, 0, 0.88], [255, 255, 255, 0.94], textT)
             )
             setStyleIfChanged(
+                signatureNoteRef.current,
+                "color",
+                mixColor([0, 0, 0, 0.62], [255, 255, 255, 0.82], textT)
+            )
+            setStyleIfChanged(
                 titleRef.current,
                 "color",
                 mixColor([0, 0, 0, 0.95], [255, 255, 255, 0.98], textT)
@@ -351,6 +383,7 @@ export default function HongyadongFramer(props: Props) {
                 mixColor([0, 0, 0, 0.5], [255, 255, 255, 0.8], textT)
             )
             signatureRef.current?.classList.toggle("is-visible", signatureReady)
+            signatureNoteRef.current?.classList.toggle("is-visible", signatureReady)
         }
 
         const buildMotes = () => {
@@ -1213,6 +1246,42 @@ export default function HongyadongFramer(props: Props) {
                     }
                 }
 
+                .hyf-reveal-char-copy {
+                    opacity: 0;
+                    visibility: hidden;
+                }
+
+                .hyf-reveal-char-copy.is-visible {
+                    opacity: 1;
+                    visibility: visible;
+                }
+
+                .hyf-reveal-char {
+                    display: inline-block;
+                    opacity: 0;
+                    transform: translateY(34px);
+                    filter: blur(8px);
+                    will-change: transform, opacity, filter;
+                }
+
+                .hyf-reveal-char-copy.is-visible .hyf-reveal-char {
+                    animation: hyfSignatureReveal 0.88s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                    animation-delay: calc(var(--reveal-delay, 0ms) + (var(--char-index) * 52ms));
+                }
+
+                .hyf-reveal-space {
+                    display: inline-block;
+                    width: 0.34em;
+                }
+
+                @keyframes hyfSignatureReveal {
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                        filter: blur(0);
+                    }
+                }
+
                 .hyf-sub {
                     margin: 0;
                     font-family: "Murecho", "Inter", system-ui, sans-serif;
@@ -1233,8 +1302,15 @@ export default function HongyadongFramer(props: Props) {
                     padding-bottom: 0;
                 }
 
+                .hyf-signature-row {
+                    display: flex;
+                    align-items: flex-end;
+                    gap: clamp(12px, 1.8vw, 26px);
+                    flex-wrap: wrap;
+                }
+
                 .hyf-signature {
-                    width: 100%;
+                    width: auto;
                     margin: 0;
                     text-align: left;
                     font-family: "Murecho", "Inter", system-ui, sans-serif;
@@ -1245,6 +1321,18 @@ export default function HongyadongFramer(props: Props) {
                     text-transform: uppercase;
                     white-space: nowrap;
                     color: rgba(0, 0, 0, 0.88);
+                    pointer-events: none;
+                }
+
+                .hyf-signature-note {
+                    margin: 0 0 0.18em;
+                    font-family: "Murecho", "Inter", system-ui, sans-serif;
+                    font-size: clamp(12px, 1vw, 15px);
+                    font-weight: 400;
+                    line-height: 1.35;
+                    letter-spacing: 0.08em;
+                    color: rgba(0, 0, 0, 0.62);
+                    white-space: nowrap;
                     pointer-events: none;
                 }
 
@@ -1285,6 +1373,16 @@ export default function HongyadongFramer(props: Props) {
                     .hyf-signature {
                         font-size: clamp(34px, 11vw, 88px);
                         letter-spacing: clamp(0.08em, 0.9vw, 0.15em);
+                    }
+
+                    .hyf-signature-row {
+                        gap: 10px;
+                    }
+
+                    .hyf-signature-note {
+                        margin-bottom: 0.14em;
+                        font-size: 11px;
+                        letter-spacing: 0.06em;
                     }
                 }
 
@@ -1342,11 +1440,16 @@ export default function HongyadongFramer(props: Props) {
                     .hyf-signature {
                         font-size: clamp(40px, 8vw, 108px);
                     }
+
+                    .hyf-signature-note {
+                        margin-bottom: 0.08em;
+                    }
                 }
 
                 @media (prefers-reduced-motion: reduce) {
                     .hyf-title-line,
-                    .hyf-reveal-word {
+                    .hyf-reveal-word,
+                    .hyf-reveal-char {
                         opacity: 1;
                         transform: none;
                         filter: none;
@@ -1380,6 +1483,11 @@ export default function HongyadongFramer(props: Props) {
                     .hyf-signature {
                         font-size: clamp(30px, 10.5vw, 64px);
                         letter-spacing: clamp(0.06em, 0.7vw, 0.12em);
+                    }
+
+                    .hyf-signature-note {
+                        font-size: 10px;
+                        letter-spacing: 0.05em;
                     }
                 }
             `}</style>
@@ -1433,12 +1541,21 @@ export default function HongyadongFramer(props: Props) {
                     </div>
 
                     <div ref={bottomRef} className="hyf-bottom">
-                        <div
-                            ref={signatureRef}
-                            className="hyf-signature hyf-reveal-copy"
-                            style={{ ["--reveal-delay" as any]: "180ms" }}
-                        >
-                            {renderRevealText("XUYUAN LIU")}
+                        <div className="hyf-signature-row">
+                            <div
+                                ref={signatureRef}
+                                className="hyf-signature hyf-reveal-char-copy"
+                                style={{ ["--reveal-delay" as any]: "180ms" }}
+                            >
+                                {renderRevealCharacters("XUYUAN LIU")}
+                            </div>
+                            <p
+                                ref={signatureNoteRef}
+                                className="hyf-signature-note hyf-reveal-copy"
+                                style={{ ["--reveal-delay" as any]: "760ms" }}
+                            >
+                                {renderRevealText(signatureNote)}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -1457,7 +1574,8 @@ HongyadongFramer.defaultProps = {
     titleLine2: "Me.",
     titleZh: "",
     subtitle:
-        "Product designer & creative developer.\nI design for intuition - building at the intersection of humanities and creative engineering.",
+        "I'm a curious generalist with too many tabs open.\nI know a little about a lot, chase odd possibilities for fun, and lately I've been building with AI to see which ideas deserve to become real.",
+    signatureNote: "This nightscape is my hometown, Chongqing.",
     scrollDemo: 0,
 }
 
@@ -1490,6 +1608,10 @@ addPropertyControls(HongyadongFramer, {
         type: ControlType.String,
         title: "Body",
         displayTextArea: true,
+    },
+    signatureNote: {
+        type: ControlType.String,
+        title: "Note",
     },
     scrollDemo: {
         type: ControlType.Number,
