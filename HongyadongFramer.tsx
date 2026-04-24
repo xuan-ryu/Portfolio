@@ -4,6 +4,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 
 type Props = {
     imageSrc: string
+    profilePhoto: string
     eyebrow: string
     titleLine1: string
     titleLine2: string
@@ -133,6 +134,7 @@ type Mote = {
 export default function HongyadongFramer(props: Props) {
     const {
         imageSrc,
+        profilePhoto,
         eyebrow,
         titleLine1,
         titleLine2,
@@ -151,6 +153,7 @@ export default function HongyadongFramer(props: Props) {
     const bottomRef = useRef<HTMLDivElement>(null)
     const eyebrowRef = useRef<HTMLDivElement>(null)
     const hintRef = useRef<HTMLDivElement>(null)
+    const avatarRef = useRef<HTMLDivElement>(null)
     const titleRef = useRef<HTMLHeadingElement>(null)
     const zhRef = useRef<HTMLDivElement>(null)
     const subRef = useRef<HTMLParagraphElement>(null)
@@ -341,6 +344,7 @@ export default function HongyadongFramer(props: Props) {
             if (shouldShowCopy !== copyVisible) {
                 copyVisible = shouldShowCopy
                 ;[
+                    avatarRef.current,
                     eyebrowRef.current,
                     zhRef.current,
                     subRef.current,
@@ -1026,6 +1030,33 @@ export default function HongyadongFramer(props: Props) {
                     }
                 }
 
+                .hyf-avatar {
+                    width: 64px;
+                    height: 64px;
+                    border-radius: 50%;
+                    overflow: hidden;
+                    margin: 0 0 28px;
+                    opacity: 0;
+                    transform: translateY(12px) scale(0.92);
+                    filter: blur(4px);
+                    transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+                                transform 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+                                filter 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+                }
+
+                .hyf-avatar.is-visible {
+                    opacity: 1;
+                    transform: none;
+                    filter: none;
+                }
+
+                .hyf-avatar img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                    display: block;
+                }
+
                 .hyf-zh {
                     margin: 0 0 22px;
                     font-family: "Cormorant Garamond", "ZCOOL XiaoWei", "Noto Serif SC", Georgia, serif;
@@ -1239,6 +1270,11 @@ export default function HongyadongFramer(props: Props) {
                     </div>
 
                     <div className="hyf-hero">
+                        {profilePhoto && (
+                            <div ref={avatarRef} className="hyf-avatar hyf-reveal-copy">
+                                <img src={profilePhoto} alt="" />
+                            </div>
+                        )}
                         <h1 ref={titleRef} className="hyf-title">
                             <span className="hyf-title-line">{titleLine1}</span>
                             <span className="hyf-title-line">{titleLine2}</span>
@@ -1278,6 +1314,7 @@ HongyadongFramer.defaultProps = {
     width: 1200,
     height: 2400,
     imageSrc: "hero.png",
+    profilePhoto: "",
     eyebrow: "Profile",
     titleLine1: "About",
     titleLine2: "Me.",
@@ -1291,7 +1328,11 @@ HongyadongFramer.defaultProps = {
 addPropertyControls(HongyadongFramer, {
     imageSrc: {
         type: ControlType.Image,
-        title: "Image",
+        title: "Particle Src",
+    },
+    profilePhoto: {
+        type: ControlType.Image,
+        title: "Profile Photo",
     },
     eyebrow: {
         type: ControlType.String,
