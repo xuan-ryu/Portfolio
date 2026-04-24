@@ -112,16 +112,17 @@ function renderRevealCharacters(text: string) {
         }
 
         return (
-            <span
-                key={`${char}-${index}`}
-                className="hyf-reveal-char"
-                style={
-                    {
-                        ["--char-index" as any]: charIndex++,
-                    } as React.CSSProperties
-                }
-            >
-                {char}
+            <span key={`${char}-${index}`} className="hyf-reveal-char-slot">
+                <span
+                    className="hyf-reveal-char"
+                    style={
+                        {
+                            ["--char-index" as any]: charIndex++,
+                        } as React.CSSProperties
+                    }
+                >
+                    {char}
+                </span>
             </span>
         )
     })
@@ -1256,16 +1257,24 @@ export default function HongyadongFramer(props: Props) {
                     visibility: visible;
                 }
 
+                .hyf-reveal-char-slot {
+                    display: inline-block;
+                    overflow: hidden;
+                    vertical-align: bottom;
+                    padding-bottom: 0.04em;
+                    margin-bottom: -0.04em;
+                }
+
                 .hyf-reveal-char {
                     display: inline-block;
                     opacity: 0;
-                    transform: translateY(34px);
-                    filter: blur(8px);
+                    transform: translateY(118%);
+                    filter: blur(6px);
                     will-change: transform, opacity, filter;
                 }
 
                 .hyf-reveal-char-copy.is-visible .hyf-reveal-char {
-                    animation: hyfSignatureReveal 0.88s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                    animation: hyfSignatureReveal 0.92s cubic-bezier(0.16, 1, 0.3, 1) forwards;
                     animation-delay: calc(var(--reveal-delay, 0ms) + (var(--char-index) * 52ms));
                 }
 

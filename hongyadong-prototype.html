@@ -226,16 +226,24 @@
       visibility: visible;
     }
 
+    .reveal-char-slot {
+      display: inline-block;
+      overflow: hidden;
+      vertical-align: bottom;
+      padding-bottom: 0.04em;
+      margin-bottom: -0.04em;
+    }
+
     .reveal-char {
       display: inline-block;
       opacity: 0;
-      transform: translateY(34px);
-      filter: blur(8px);
+      transform: translateY(118%);
+      filter: blur(6px);
       will-change: transform, opacity, filter;
     }
 
     .reveal-char-copy.is-visible .reveal-char {
-      animation: signatureReveal 0.88s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      animation: signatureReveal 0.92s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       animation-delay: calc(var(--reveal-delay, 0ms) + (var(--char-index) * 52ms));
     }
 
@@ -693,11 +701,16 @@
           return;
         }
 
+        const slotEl = document.createElement("span");
+        slotEl.className = "reveal-char-slot";
+
         const charEl = document.createElement("span");
         charEl.className = "reveal-char";
         charEl.style.setProperty("--char-index", String(charIndex++));
         charEl.textContent = char;
-        el.appendChild(charEl);
+
+        slotEl.appendChild(charEl);
+        el.appendChild(slotEl);
       });
 
       el.dataset.revealPrepared = "1";
