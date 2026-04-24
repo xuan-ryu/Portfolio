@@ -314,6 +314,7 @@ export default function HongyadongFramer(props: Props) {
 
         const syncUIText = (progress: number) => {
             const textT = smoothstep(0.12, 0.48, progress)
+            const signatureReady = progress >= 0.58
             setStyleIfChanged(
                 topRef.current,
                 "color",
@@ -349,6 +350,7 @@ export default function HongyadongFramer(props: Props) {
                 "color",
                 mixColor([0, 0, 0, 0.5], [255, 255, 255, 0.8], textT)
             )
+            signatureRef.current?.classList.toggle("is-visible", signatureReady)
         }
 
         const buildMotes = () => {
@@ -964,7 +966,6 @@ export default function HongyadongFramer(props: Props) {
                 eyebrowRef.current,
                 zhRef.current,
                 subRef.current,
-                signatureRef.current,
             ].forEach((el) => {
                 el?.classList.add("is-visible")
             })
@@ -1056,13 +1057,13 @@ export default function HongyadongFramer(props: Props) {
                 .hyf-ui {
                     position: relative;
                     z-index: 2;
-                    width: min(1440px, 100%);
+                    width: 100%;
                     height: 100%;
                     margin: 0 auto;
                     padding:
                         calc(clamp(30px, 4.6vw, 72px) + env(safe-area-inset-top, 0px))
                         calc(clamp(30px, 4.6vw, 72px) + env(safe-area-inset-right, 0px))
-                        calc(clamp(30px, 4.6vw, 72px) + env(safe-area-inset-bottom, 0px))
+                        0
                         calc(clamp(30px, 4.6vw, 72px) + env(safe-area-inset-left, 0px));
                     display: grid;
                     grid-template-rows: auto 1fr auto;
@@ -1097,7 +1098,6 @@ export default function HongyadongFramer(props: Props) {
 
                 .hyf-hero {
                     width: 100%;
-                    max-width: 1440px;
                     align-self: center;
                     justify-self: center;
                     padding-bottom: clamp(56px, 8vh, 96px);
@@ -1215,7 +1215,6 @@ export default function HongyadongFramer(props: Props) {
 
                 .hyf-sub {
                     margin: 0;
-                    max-width: 620px;
                     font-family: "Murecho", "Inter", system-ui, sans-serif;
                     font-size: clamp(16px, 1.5vw, 22px);
                     font-weight: 400;
@@ -1229,20 +1228,19 @@ export default function HongyadongFramer(props: Props) {
                 .hyf-bottom {
                     width: 100%;
                     display: flex;
-                    justify-content: center;
+                    justify-content: flex-start;
                     align-items: flex-end;
-                    padding-bottom: clamp(4px, 1.2vh, 16px);
+                    padding-bottom: 0;
                 }
 
                 .hyf-signature {
                     width: 100%;
-                    max-width: 1440px;
-                    margin: 0 auto;
-                    text-align: center;
+                    margin: 0;
+                    text-align: left;
                     font-family: "Murecho", "Inter", system-ui, sans-serif;
                     font-size: clamp(42px, 10.8vw, 214px);
-                    line-height: 0.84;
-                    font-weight: 500;
+                    line-height: 0.76;
+                    font-weight: 300;
                     letter-spacing: clamp(0.08em, 0.55vw, 0.24em);
                     text-transform: uppercase;
                     white-space: nowrap;
@@ -1255,7 +1253,7 @@ export default function HongyadongFramer(props: Props) {
                         padding:
                             calc(24px + env(safe-area-inset-top, 0px))
                             calc(20px + env(safe-area-inset-right, 0px))
-                            calc(28px + env(safe-area-inset-bottom, 0px))
+                            0
                             calc(20px + env(safe-area-inset-left, 0px));
                     }
 
@@ -1275,7 +1273,6 @@ export default function HongyadongFramer(props: Props) {
                     }
 
                     .hyf-sub {
-                        max-width: 360px;
                         font-size: 14px;
                         line-height: 1.5;
                     }
@@ -1294,6 +1291,7 @@ export default function HongyadongFramer(props: Props) {
                 @media (max-height: 760px) {
                     .hyf-ui {
                         padding-top: max(22px, env(safe-area-inset-top, 0px));
+                        padding-bottom: 0;
                     }
 
                     .hyf-hero {
@@ -1310,7 +1308,6 @@ export default function HongyadongFramer(props: Props) {
                     }
 
                     .hyf-sub {
-                        max-width: 520px;
                         font-size: clamp(14px, 1.3vw, 18px);
                     }
                 }
@@ -1320,7 +1317,7 @@ export default function HongyadongFramer(props: Props) {
                         padding:
                             calc(18px + env(safe-area-inset-top, 0px))
                             calc(18px + env(safe-area-inset-right, 0px))
-                            calc(22px + env(safe-area-inset-bottom, 0px))
+                            0
                             calc(18px + env(safe-area-inset-left, 0px));
                     }
 
@@ -1335,7 +1332,6 @@ export default function HongyadongFramer(props: Props) {
                     }
 
                     .hyf-sub {
-                        max-width: 420px;
                         font-size: 13px;
                     }
 
@@ -1370,7 +1366,6 @@ export default function HongyadongFramer(props: Props) {
                     }
 
                     .hyf-sub {
-                        max-width: 100%;
                         font-size: 13px;
                     }
 
