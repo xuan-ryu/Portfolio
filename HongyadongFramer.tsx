@@ -10,7 +10,6 @@ type Props = {
     titleLine2: string
     titleZh: string
     subtitle: string
-    hint: string
     scrollDemo: number
 }
 
@@ -140,7 +139,6 @@ export default function HongyadongFramer(props: Props) {
         titleLine2,
         titleZh,
         subtitle,
-        hint,
         scrollDemo,
     } = props
 
@@ -152,7 +150,7 @@ export default function HongyadongFramer(props: Props) {
     const topRef = useRef<HTMLDivElement>(null)
     const bottomRef = useRef<HTMLDivElement>(null)
     const eyebrowRef = useRef<HTMLDivElement>(null)
-    const hintRef = useRef<HTMLDivElement>(null)
+    const signatureRef = useRef<HTMLDivElement>(null)
     const avatarRef = useRef<HTMLDivElement>(null)
     const titleRef = useRef<HTMLHeadingElement>(null)
     const zhRef = useRef<HTMLDivElement>(null)
@@ -245,7 +243,6 @@ export default function HongyadongFramer(props: Props) {
         let slowFrames = 0
         let fastFrames = 0
         let lastNow = 0
-        let copyVisible = false
         let titleReadyFrame = 0
         let scrollMax = 1
         let lastDrift = -1
@@ -315,8 +312,6 @@ export default function HongyadongFramer(props: Props) {
             },
         ]
 
-        const COPY_REVEAL_THRESHOLD = reducedMotion ? 0.18 : 0.24
-
         const syncUIText = (progress: number) => {
             const textT = smoothstep(0.12, 0.48, progress)
             setStyleIfChanged(
@@ -335,9 +330,9 @@ export default function HongyadongFramer(props: Props) {
                 mixColor([0, 0, 0, 0.52], [255, 255, 255, 0.82], textT)
             )
             setStyleIfChanged(
-                hintRef.current,
+                signatureRef.current,
                 "color",
-                mixColor([0, 0, 0, 0.44], [255, 255, 255, 0.78], textT)
+                mixColor([0, 0, 0, 0.88], [255, 255, 255, 0.94], textT)
             )
             setStyleIfChanged(
                 titleRef.current,
@@ -354,20 +349,6 @@ export default function HongyadongFramer(props: Props) {
                 "color",
                 mixColor([0, 0, 0, 0.5], [255, 255, 255, 0.8], textT)
             )
-
-            const shouldShowCopy = progress >= COPY_REVEAL_THRESHOLD
-            if (shouldShowCopy !== copyVisible) {
-                copyVisible = shouldShowCopy
-                ;[
-                    avatarRef.current,
-                    eyebrowRef.current,
-                    zhRef.current,
-                    subRef.current,
-                    hintRef.current,
-                ].forEach((el) => {
-                    el?.classList.toggle("is-visible", shouldShowCopy)
-                })
-            }
         }
 
         const buildMotes = () => {
@@ -554,22 +535,22 @@ export default function HongyadongFramer(props: Props) {
         }
 
         const drawFog = (time: number, drift: number) => {
-            const fogStrength = smoothstep(0.35, 0.0, drift)
+            const fogStrength = smoothstep(0.48, 0.02, drift)
             if (fogStrength < 0.005) return
+            const fogLift = smoothstep(0.02, 0.4, drift) * H * 0.24
 
-            // Layered elliptical fog bands, each drifting at a different speed
             const layers = [
-                { yFrac: 0.52, ryFrac: 0.052, rxMult: 12, speed: 0.013, phase: 0.0, alpha: 0.16 },
-                { yFrac: 0.63, ryFrac: 0.068, rxMult: 11, speed: -0.010, phase: 2.1, alpha: 0.21 },
-                { yFrac: 0.73, ryFrac: 0.088, rxMult: 10, speed: 0.008,  phase: 4.4, alpha: 0.27 },
-                { yFrac: 0.82, ryFrac: 0.108, rxMult: 9,  speed: -0.006, phase: 1.7, alpha: 0.33 },
+                { yFrac: 0.64, ryFrac: 0.11, rxMult: 8.6, speed: 0.011, phase: 0.0, alpha: 0.14, lift: 0.36 },
+                { yFrac: 0.76, ryFrac: 0.14, rxMult: 7.8, speed: -0.009, phase: 2.1, alpha: 0.18, lift: 0.58 },
+                { yFrac: 0.88, ryFrac: 0.17, rxMult: 7.1, speed: 0.007, phase: 4.4, alpha: 0.24, lift: 0.82 },
+                { yFrac: 0.99, ryFrac: 0.21, rxMult: 6.5, speed: -0.005, phase: 1.7, alpha: 0.30, lift: 1.0 },
             ]
 
             for (const l of layers) {
                 const ry = l.ryFrac * H
                 const rx = ry * l.rxMult
-                const cx = W * 0.5 + Math.sin(time * l.speed + l.phase) * W * 0.13
-                const cy = l.yFrac * H
+                const cx = W * 0.5 + Math.sin(time * l.speed + l.phase) * W * 0.10
+                const cy = l.yFrac * H - fogLift * l.lift
                 const breathe = 0.88 + Math.sin(time * 0.36 + l.phase) * 0.12
                 const a = l.alpha * fogStrength * breathe
 
@@ -587,12 +568,21 @@ export default function HongyadongFramer(props: Props) {
                 ctx.restore()
             }
 
-            // Dense base at very bottom
-            const base = ctx.createLinearGradient(0, H * 0.87, 0, H)
+            const blanketTop = H * 0.46 - fogLift * 0.18
+            const blanket = ctx.createLinearGradient(0, blanketTop, 0, H)
+            blanket.addColorStop(0, "rgba(248,246,242,0)")
+            blanket.addColorStop(0.38, `rgba(248,246,242,${0.14 * fogStrength})`)
+            blanket.addColorStop(0.78, `rgba(248,246,242,${0.24 * fogStrength})`)
+            blanket.addColorStop(1, `rgba(248,246,242,${0.38 * fogStrength})`)
+            ctx.fillStyle = blanket
+            ctx.fillRect(0, blanketTop, W, H - blanketTop)
+
+            const base = ctx.createLinearGradient(0, H * 0.70 - fogLift * 0.28, 0, H)
             base.addColorStop(0, "rgba(248,246,242,0)")
-            base.addColorStop(1, `rgba(248,246,242,${0.68 * fogStrength})`)
+            base.addColorStop(0.42, `rgba(248,246,242,${0.18 * fogStrength})`)
+            base.addColorStop(1, `rgba(248,246,242,${0.56 * fogStrength})`)
             ctx.fillStyle = base
-            ctx.fillRect(0, H * 0.87, W, H * 0.13)
+            ctx.fillRect(0, H * 0.70 - fogLift * 0.28, W, H * 0.30 + fogLift * 0.28)
         }
 
         const drawMotes = (drift: number) => {
@@ -687,6 +677,8 @@ export default function HongyadongFramer(props: Props) {
             const imgData = pxImgData as ImageData
             const cfg = TIER_CFG[tier]
             const ignite = smoothstep(0.02, 0.68, drift)
+            const bwReveal = smoothstep(0.03, 0.34, drift)
+            const isMobile = W < 768 || touchCapable
             const spread = smoothstep(0.12, 1, drift) * cfg.spread
             const colorSat = smoothstep(0.0, 0.5, drift)
             const parallaxX = smoothY * cfg.parallaxX
@@ -707,6 +699,15 @@ export default function HongyadongFramer(props: Props) {
             pixels.fill(0)
 
             for (const p of imageParticles) {
+                const particleSeed = (p.twinkle / (Math.PI * 2)) % 1
+                const heightBias = clamp((p.y / Math.max(H, 1) - 0.22) / 0.78, 0, 1)
+                const densityFloor = reducedMotion ? 0.46 : isMobile ? 0.40 : 0.32
+                const densityGate = Math.min(
+                    1,
+                    densityFloor + bwReveal * (1 - densityFloor) + heightBias * 0.22
+                )
+                if (particleSeed > densityGate) continue
+
                 const layerDepth = 1 + p.z * 0.22
                 let px =
                     p.x +
@@ -741,9 +742,15 @@ export default function HongyadongFramer(props: Props) {
                 const radius =
                     p.radius *
                     twinkle *
+                    (0.8 + bwReveal * 0.2) *
                     (1 + ignite * p.luma * 0.08) *
                     (0.7 + p.z * 0.5)
-                const alpha = p.alpha * twinkle * (0.65 + p.z * 0.35)
+                const alphaLift = 0.30 + bwReveal * 0.70
+                const alpha =
+                    p.alpha *
+                    twinkle *
+                    alphaLift *
+                    (0.58 + heightBias * 0.16 + p.z * 0.26)
                 const pr = Math.round(p.sr * colorSat)
                 const pg = Math.round(p.sg * colorSat)
                 const pb = Math.round(p.sb * colorSat)
@@ -952,6 +959,15 @@ export default function HongyadongFramer(props: Props) {
         titleRef.current?.classList.remove("is-ready")
         titleReadyFrame = requestAnimationFrame(() => {
             titleRef.current?.classList.add("is-ready")
+            ;[
+                avatarRef.current,
+                eyebrowRef.current,
+                zhRef.current,
+                subRef.current,
+                signatureRef.current,
+            ].forEach((el) => {
+                el?.classList.add("is-visible")
+            })
         })
 
         const start = () => {
@@ -1023,25 +1039,10 @@ export default function HongyadongFramer(props: Props) {
                     user-select: none;
                 }
 
-                .hyf-fog {
-                    position: absolute;
-                    inset: 0;
-                    pointer-events: none;
-                    background:
-                        linear-gradient(
-                            to bottom,
-                            rgba(4, 2, 8, 0.55) 0%,
-                            rgba(4, 2, 8, 0.10) 16%,
-                            transparent 38%,
-                            transparent 56%,
-                            rgba(4, 2, 8, 0.42) 78%,
-                            rgba(2, 0, 4, 0.82) 100%
-                        );
-                }
-
                 .hyf-stage canvas {
                     position: absolute;
                     inset: 0;
+                    z-index: 0;
                     pointer-events: none;
                     display: block;
                 }
@@ -1055,7 +1056,7 @@ export default function HongyadongFramer(props: Props) {
                 .hyf-ui {
                     position: relative;
                     z-index: 2;
-                    width: min(1280px, 100%);
+                    width: min(1440px, 100%);
                     height: 100%;
                     margin: 0 auto;
                     padding:
@@ -1068,8 +1069,7 @@ export default function HongyadongFramer(props: Props) {
                     pointer-events: none;
                 }
 
-                .hyf-top,
-                .hyf-bottom {
+                .hyf-top {
                     display: flex;
                     justify-content: space-between;
                     align-items: flex-start;
@@ -1080,16 +1080,14 @@ export default function HongyadongFramer(props: Props) {
                     color: rgba(0, 0, 0, 0.52);
                 }
 
-                .hyf-eyebrow,
-                .hyf-hint {
+                .hyf-eyebrow {
                     display: flex;
                     align-items: center;
                     gap: 16px;
                     font-weight: 400;
                 }
 
-                .hyf-eyebrow::before,
-                .hyf-hint::before {
+                .hyf-eyebrow::before {
                     content: "";
                     width: 36px;
                     height: 1px;
@@ -1098,8 +1096,10 @@ export default function HongyadongFramer(props: Props) {
                 }
 
                 .hyf-hero {
+                    width: 100%;
+                    max-width: 1440px;
                     align-self: center;
-                    max-width: min(860px, 78vw);
+                    justify-self: center;
                     padding-bottom: clamp(56px, 8vh, 96px);
                 }
 
@@ -1108,7 +1108,7 @@ export default function HongyadongFramer(props: Props) {
                     font-family: "Cormorant Garamond", "ZCOOL XiaoWei", "Noto Serif SC", Georgia, serif;
                     font-size: clamp(82px, 12vw, 168px);
                     line-height: 0.88;
-                    font-weight: 600;
+                    font-weight: 300;
                     letter-spacing: 0.015em;
                     color: rgba(0, 0, 0, 0.95);
                     text-transform: none;
@@ -1227,8 +1227,27 @@ export default function HongyadongFramer(props: Props) {
                 }
 
                 .hyf-bottom {
+                    width: 100%;
+                    display: flex;
+                    justify-content: center;
                     align-items: flex-end;
-                    padding-bottom: 2px;
+                    padding-bottom: clamp(4px, 1.2vh, 16px);
+                }
+
+                .hyf-signature {
+                    width: 100%;
+                    max-width: 1440px;
+                    margin: 0 auto;
+                    text-align: center;
+                    font-family: "Murecho", "Inter", system-ui, sans-serif;
+                    font-size: clamp(42px, 10.8vw, 214px);
+                    line-height: 0.84;
+                    font-weight: 500;
+                    letter-spacing: clamp(0.08em, 0.55vw, 0.24em);
+                    text-transform: uppercase;
+                    white-space: nowrap;
+                    color: rgba(0, 0, 0, 0.88);
+                    pointer-events: none;
                 }
 
                 @media (max-width: 768px) {
@@ -1241,7 +1260,7 @@ export default function HongyadongFramer(props: Props) {
                     }
 
                     .hyf-hero {
-                        max-width: 92vw;
+                        width: 100%;
                         padding-bottom: 40px;
                     }
 
@@ -1261,10 +1280,14 @@ export default function HongyadongFramer(props: Props) {
                         line-height: 1.5;
                     }
 
-                    .hyf-top,
-                    .hyf-bottom {
+                    .hyf-top {
                         font-size: 11px;
                         letter-spacing: 0.14em;
+                    }
+
+                    .hyf-signature {
+                        font-size: clamp(34px, 11vw, 88px);
+                        letter-spacing: clamp(0.08em, 0.9vw, 0.15em);
                     }
                 }
 
@@ -1274,7 +1297,7 @@ export default function HongyadongFramer(props: Props) {
                     }
 
                     .hyf-hero {
-                        max-width: min(820px, 82vw);
+                        width: 100%;
                         padding-bottom: 28px;
                     }
 
@@ -1302,7 +1325,7 @@ export default function HongyadongFramer(props: Props) {
                     }
 
                     .hyf-hero {
-                        max-width: min(72vw, 620px);
+                        width: 100%;
                         align-self: end;
                         padding-bottom: 16px;
                     }
@@ -1316,9 +1339,12 @@ export default function HongyadongFramer(props: Props) {
                         font-size: 13px;
                     }
 
-                    .hyf-top,
-                    .hyf-bottom {
+                    .hyf-top {
                         font-size: 10px;
+                    }
+
+                    .hyf-signature {
+                        font-size: clamp(40px, 8vw, 108px);
                     }
                 }
 
@@ -1355,6 +1381,11 @@ export default function HongyadongFramer(props: Props) {
                     .hyf-eyebrow {
                         display: none;
                     }
+
+                    .hyf-signature {
+                        font-size: clamp(30px, 10.5vw, 64px);
+                        letter-spacing: clamp(0.06em, 0.7vw, 0.12em);
+                    }
                 }
             `}</style>
 
@@ -1366,7 +1397,6 @@ export default function HongyadongFramer(props: Props) {
                     crossOrigin="anonymous"
                     alt=""
                 />
-                <div className="hyf-fog" />
                 <canvas ref={canvasRef} />
                 <canvas ref={glowCanvasRef} className="hyf-glow" />
 
@@ -1409,11 +1439,11 @@ export default function HongyadongFramer(props: Props) {
 
                     <div ref={bottomRef} className="hyf-bottom">
                         <div
-                            ref={hintRef}
-                            className="hyf-hint hyf-reveal-copy"
+                            ref={signatureRef}
+                            className="hyf-signature hyf-reveal-copy"
                             style={{ ["--reveal-delay" as any]: "180ms" }}
                         >
-                            {renderRevealText(hint)}
+                            {renderRevealText("XUYUAN LIU")}
                         </div>
                     </div>
                 </div>
@@ -1433,7 +1463,6 @@ HongyadongFramer.defaultProps = {
     titleZh: "",
     subtitle:
         "Product designer & creative developer.\nI design for intuition - building at the intersection of humanities and creative engineering.",
-    hint: "Scroll to explore",
     scrollDemo: 0,
 }
 
@@ -1466,10 +1495,6 @@ addPropertyControls(HongyadongFramer, {
         type: ControlType.String,
         title: "Body",
         displayTextArea: true,
-    },
-    hint: {
-        type: ControlType.String,
-        title: "Hint",
     },
     scrollDemo: {
         type: ControlType.Number,
